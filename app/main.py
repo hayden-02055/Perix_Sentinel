@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.core.logger import get_logger
+from app.infrastructure.repositories.sqlite_item_repository import SqliteItemRepository
 from app.interface.api.health import router as health_router
 from app.interface.api.collect import router as collect_router
 
@@ -13,6 +14,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Perix Sentinel starting up [env=%s]", settings.app_env)
+    await SqliteItemRepository().init_db()
     yield
     logger.info("Perix Sentinel shutting down")
 
