@@ -1,0 +1,10 @@
+services:
+  sentinel:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./perix_sentinel.db:/app/perix_sentinel.db
+    restart: unless-stopped
