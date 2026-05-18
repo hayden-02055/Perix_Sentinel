@@ -2,6 +2,8 @@ from fastapi import APIRouter
 
 from app.application.use_cases.collect_trends import CollectTrendsUseCase
 from app.infrastructure.collectors.anthropic_html_collector import AnthropicHtmlCollector
+from app.infrastructure.collectors.deepmind_html_collector import DeepmindHtmlCollector
+from app.infrastructure.collectors.meta_html_collector import MetaHtmlCollector
 from app.infrastructure.collectors.openai_rss_collector import OpenAIRssCollector
 from app.infrastructure.repositories.sqlite_item_repository import SqliteItemRepository
 
@@ -14,6 +16,8 @@ async def trigger_collect() -> dict:
     collectors = {
         "openai": OpenAIRssCollector(),
         "anthropic": AnthropicHtmlCollector(),
+        "deepmind": DeepmindHtmlCollector(),
+        "meta": MetaHtmlCollector(),
     }
 
     results: dict[str, dict] = {}
