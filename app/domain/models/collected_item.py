@@ -10,7 +10,14 @@ class CollectedItem:
     published_at: datetime
     summary: str = ""
     tags: list[str] = field(default_factory=list)
+    metadata: dict = field(default_factory=dict)
     url_hash: str = ""
+
+    score: int = 0
+    importance: str = "normal"
+    reason: str = ""
+    is_briefed: bool = False
+    briefed_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if not self.url_hash:
