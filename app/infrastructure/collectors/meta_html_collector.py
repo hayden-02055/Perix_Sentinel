@@ -1,12 +1,12 @@
 import re
-from datetime import datetime, timezone
 
-import httpx
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import NavigableString, Tag
 
+from app.core.datetime_utils import now_utc, try_parse_date
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
+from app.infrastructure.http.async_client import fetch_html
 
 logger = get_logger(__name__)
 
@@ -44,16 +44,7 @@ def _keyword_tags(text: str) -> list[str]:
 class MetaHtmlCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
         logger.info("Collecting from Meta AI Blog: %s", BLOG_URL)
-
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=20.0,
-            headers={"User-Agent": "Mozilla/5.0"},
-        ) as client:
-            response = await client.get(BLOG_URL)
-            response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = await fetch_html(BLOG_URL)
 
         # 모든 블로그 포스트 URL 수집 (중복 제거)
         all_blog_anchors = soup.find_all("a", href=BLOG_HREF_RE)
@@ -135,9 +126,9 @@ class MetaHtmlCollector(CollectorPort):
                 return node
         return None
 
-    def _extract_date(self, container: Tag | None) -> datetime:
+    def _extract_date(self, container: Tag | None):
         if container is None:
-            return datetime.now(timezone.utc)
+            return now_utc()
 
         for string in container.strings:
             if not isinstance(string, NavigableString):
@@ -146,14 +137,12 @@ class MetaHtmlCollector(CollectorPort):
             if DATE_RE.search(raw):
                 # "April 08, 2026" 같은 0-padded day 처리
                 raw = re.sub(r"(\w+)\s+0(\d),", r"\1 \2,", raw)
-                for fmt in DATE_FORMATS:
-                    try:
-                        return datetime.strptime(raw, fmt)
-                    except ValueError:
-                        continue
+                dt = try_parse_date(raw, DATE_FORMATS)
+                if dt is not None:
+                    return dt
 
         logger.warning("Date not found for Meta AI card")
-        return datetime.now(timezone.utc)
+        return now_utc()
 
     def _extract_summary(self, container: Tag | None, title: str) -> str:
         if container is None:

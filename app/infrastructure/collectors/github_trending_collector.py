@@ -1,11 +1,10 @@
-from datetime import datetime
+from bs4 import Tag
 
-import httpx
-from bs4 import BeautifulSoup, Tag
-
+from app.core.datetime_utils import now_utc
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
+from app.infrastructure.http.async_client import fetch_html
 
 logger = get_logger(__name__)
 
@@ -80,7 +79,7 @@ def _parse_article(article: Tag) -> CollectedItem | None:
         source="GitHub Trending",
         title=repo_full,
         url=url,
-        published_at=datetime.utcnow(),
+        published_at=now_utc(),
         summary=description,
         tags=tags,
         metadata={
@@ -96,15 +95,7 @@ class GitHubTrendingCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
         logger.info("Collecting from GitHub Trending: %s", TRENDING_URL)
 
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=15.0,
-            headers={"User-Agent": "Mozilla/5.0"},
-        ) as client:
-            response = await client.get(TRENDING_URL)
-            response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = await fetch_html(TRENDING_URL)
         articles = soup.select("article.Box-row")
 
         if not articles:

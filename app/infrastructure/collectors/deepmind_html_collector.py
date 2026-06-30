@@ -1,12 +1,12 @@
-from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
 
-import httpx
-from bs4 import BeautifulSoup, Tag
+from bs4 import Tag
 
+from app.core.datetime_utils import now_utc, try_parse_date
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
+from app.infrastructure.http.async_client import fetch_html
 
 logger = get_logger(__name__)
 
@@ -15,7 +15,7 @@ BLOG_URL = f"{BASE_URL}/blog/"
 
 ALLOWED_DOMAINS = {"deepmind.google", "blog.google"}
 
-DATE_FORMATS = ("%B %Y", "%B %d, %Y", "%b %d, %Y", "%Y-%m-%d")
+_DATE_FORMATS = ("%B %Y", "%B %d, %Y", "%b %d, %Y", "%Y-%m-%d")
 
 
 def _resolve_url(href: str) -> str:
@@ -31,16 +31,7 @@ def _is_allowed_url(url: str) -> bool:
 class DeepmindHtmlCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
         logger.info("Collecting from DeepMind Blog: %s", BLOG_URL)
-
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=20.0,
-            headers={"User-Agent": "Mozilla/5.0"},
-        ) as client:
-            response = await client.get(BLOG_URL)
-            response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = await fetch_html(BLOG_URL)
 
         # card__overlay-link 기준으로 카드 컨테이너(부모) 탐색
         card_links = soup.select("a.card__overlay-link[href]")
@@ -100,10 +91,10 @@ class DeepmindHtmlCollector(CollectorPort):
         logger.debug("Title not found for: %s", anchor.get("href"))
         return ""
 
-    def _extract_date(self, card: Tag) -> datetime:
+    def _extract_date(self, card: Tag):
         time_el = card.find("time")
         if not time_el:
-            return datetime.now(timezone.utc)
+            return now_utc()
 
         datetime_attr: str = time_el.get("datetime", "")
         text: str = time_el.get_text(strip=True)
@@ -111,20 +102,12 @@ class DeepmindHtmlCollector(CollectorPort):
         for raw in [datetime_attr, text]:
             if not raw:
                 continue
-            # ISO 형식 시도
-            try:
-                return datetime.fromisoformat(raw.rstrip("Z"))
-            except ValueError:
-                pass
-            # 텍스트 포맷 순차 시도
-            for fmt in DATE_FORMATS:
-                try:
-                    return datetime.strptime(raw, fmt)
-                except ValueError:
-                    continue
+            dt = try_parse_date(raw, _DATE_FORMATS)
+            if dt is not None:
+                return dt
 
         logger.warning("Failed to parse DeepMind date: attr=%r text=%r", datetime_attr, text)
-        return datetime.now(timezone.utc)
+        return now_utc()
 
     def _extract_tags(self, card: Tag) -> list[str]:
         tags = ["deepmind", "google"]

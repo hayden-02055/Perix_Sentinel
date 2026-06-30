@@ -1,8 +1,8 @@
 import asyncio
-from datetime import datetime
 
 import feedparser
 
+from app.core.datetime_utils import now_utc, parse_struct_time
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
@@ -23,7 +23,11 @@ class OpenAIRssCollector(CollectorPort):
 
         items: list[CollectedItem] = []
         for entry in feed.entries:
-            published_at = self._parse_date(entry)
+            published_at = (
+                parse_struct_time(entry.published_parsed)
+                if getattr(entry, "published_parsed", None)
+                else now_utc()
+            )
             items.append(
                 CollectedItem(
                     source="OpenAI",
@@ -38,7 +42,4 @@ class OpenAIRssCollector(CollectorPort):
         logger.info("Collected %d items from OpenAI RSS", len(items))
         return items
 
-    def _parse_date(self, entry) -> datetime:
-        if hasattr(entry, "published_parsed") and entry.published_parsed:
-            return datetime(*entry.published_parsed[:6])
-        return datetime.utcnow()
+

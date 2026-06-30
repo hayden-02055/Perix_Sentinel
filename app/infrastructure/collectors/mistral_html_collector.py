@@ -1,12 +1,12 @@
 import re
-from datetime import datetime, timezone
 
-import httpx
 from bs4 import BeautifulSoup
 
+from app.core.datetime_utils import parse_date
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
+from app.infrastructure.http.async_client import fetch_html
 
 logger = get_logger(__name__)
 
@@ -97,15 +97,7 @@ class MistralHtmlCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
         logger.info("Collecting from Mistral AI News: %s", NEWS_URL)
 
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=20.0,
-            headers={"User-Agent": "Mozilla/5.0"},
-        ) as client:
-            response = await client.get(NEWS_URL)
-            response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = await fetch_html(NEWS_URL)
 
         posts_raw: list[dict] | None = None
         for script in soup.find_all("script"):
@@ -140,7 +132,7 @@ class MistralHtmlCollector(CollectorPort):
             date_str: str = post.get("date", "")
             category_name: str = (post.get("category") or {}).get("name", "")
 
-            published_at = self._parse_date(date_str)
+            published_at = parse_date(date_str)
             tags = self._build_tags(title, description, category_name)
 
             items.append(
@@ -156,15 +148,6 @@ class MistralHtmlCollector(CollectorPort):
 
         logger.info("Collected %d items from Mistral AI News", len(items))
         return items
-
-    def _parse_date(self, date_str: str) -> datetime:
-        if not date_str:
-            return datetime.now(timezone.utc)
-        try:
-            return datetime.fromisoformat(date_str.rstrip("Z"))
-        except ValueError:
-            logger.warning("Failed to parse Mistral date: %r", date_str)
-            return datetime.now(timezone.utc)
 
     def _build_tags(self, title: str, summary: str, category: str) -> list[str]:
         tags = ["mistral"]

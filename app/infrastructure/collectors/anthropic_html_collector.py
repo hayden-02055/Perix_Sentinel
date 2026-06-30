@@ -1,31 +1,21 @@
-from datetime import datetime
-
-import httpx
-from bs4 import BeautifulSoup
-
+from app.core.datetime_utils import parse_date
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
+from app.infrastructure.http.async_client import fetch_html
 
 logger = get_logger(__name__)
 
 BASE_URL = "https://www.anthropic.com"
 NEWS_URL = f"{BASE_URL}/news"
 
+_DATE_FORMATS = ("%b %d, %Y",)
+
 
 class AnthropicHtmlCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
         logger.info("Collecting from Anthropic News page: %s", NEWS_URL)
-
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=15.0,
-            headers={"User-Agent": "Mozilla/5.0"},
-        ) as client:
-            response = await client.get(NEWS_URL)
-            response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = await fetch_html(NEWS_URL)
 
         items: list[CollectedItem] = []
         seen_urls: set[str] = set()
@@ -50,9 +40,8 @@ class AnthropicHtmlCollector(CollectorPort):
                 continue
 
             summary = body_el.get_text(strip=True) if body_el else ""
-            published_at = self._parse_date(
-                time_el.get_text(strip=True) if time_el else ""
-            )
+            raw_date = time_el.get_text(strip=True) if time_el else ""
+            published_at = parse_date(raw_date, _DATE_FORMATS)
 
             items.append(
                 CollectedItem(
@@ -67,11 +56,3 @@ class AnthropicHtmlCollector(CollectorPort):
 
         logger.info("Collected %d items from Anthropic News", len(items))
         return items
-
-    def _parse_date(self, text: str) -> datetime:
-        if text:
-            try:
-                return datetime.strptime(text, "%b %d, %Y")
-            except ValueError:
-                logger.warning("Failed to parse Anthropic date: %s", text)
-        return datetime.utcnow()

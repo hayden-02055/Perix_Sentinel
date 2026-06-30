@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.core.datetime_utils import now_utc
 from app.domain.models.collected_item import CollectedItem
 from app.domain.services.scoring_policies import (
     KEYWORD_WEIGHTS,
@@ -81,7 +82,7 @@ def _recency_score(item: CollectedItem, now: datetime) -> int:
 
 
 def calculate_score(item: CollectedItem, *, now: datetime | None = None) -> ScoreBreakdown:
-    now = now or datetime.utcnow()
+    now = now or now_utc()
     keyword_total, matched = _keyword_score(item)
     return ScoreBreakdown(
         source_score=_source_score(item),
