@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.application.use_cases.collect_trends import CollectTrendsUseCase
 from app.infrastructure.collectors.anthropic_html_collector import AnthropicHtmlCollector
+from app.infrastructure.collectors.arxiv_api_collector import ArxivApiCollector
 from app.infrastructure.collectors.deepmind_html_collector import DeepmindHtmlCollector
 from app.infrastructure.collectors.github_trending_collector import GitHubTrendingCollector
 from app.infrastructure.collectors.huggingface_api_collector import HuggingFaceApiCollector
@@ -20,6 +21,7 @@ async def trigger_collect() -> dict:
     publisher = DiscordPublisher()
     collectors = {
         "openai": OpenAIRssCollector(),
+        "arxiv": ArxivApiCollector(),
         "anthropic": AnthropicHtmlCollector(),
         "deepmind": DeepmindHtmlCollector(),
         "meta": MetaHtmlCollector(),

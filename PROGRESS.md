@@ -28,6 +28,25 @@
   - `tests/fixtures/mistral_news.html` (444KB) + `mistral_news.golden.json` (75건)
   - `tests/test_mistral_collector_golden.py`: 5개 테스트
 
+### arXiv Collector SDD
+- **A0 — API 응답 덤프 & 필드 확정** ✅ (2026-07-01)
+  - feedparser 키 확인: `id`, `link`, `title`, `summary`, `published_parsed`, `tags`, `authors`, `arxiv_primary_category`, `arxiv_comment`
+  - 결정사항: `source="arXiv"`, feedparser 사용, URL=`entry.link`(https, vN 버전 그대로 MVP)
+- **A1 — `ArxivApiCollector` 구현** ✅
+  - `app/infrastructure/collectors/arxiv_api_collector.py`
+  - 카테고리: `cs.AI, cs.CL, cs.LG`, `max_results=50`, 모듈 상수로 명시
+  - title/summary 개행·연속공백 정규화 (`re.sub(r'\s+', ' ', text).strip()`)
+  - metadata: authors, primary_category, arxiv_id, comment 보존
+- **A2 — `collect.py` 등록** ✅
+  - `"arxiv": ArxivApiCollector()` 한 줄 추가
+- **A3 — 골든 fixture 테스트** ✅
+  - `tests/fixtures/arxiv_feed.xml` (3건 실제 응답) + `arxiv_feed.golden.json`
+  - `tests/test_arxiv_collector_golden.py`: feedparser.parse monkeypatch → 네트워크 없이 실행
+  - **46 passed** (전체 회귀 포함)
+- **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅
+- **A4 — `/collect` 실가동**: 미수행 (사용자 확인 후 진행)
+- **arXiv 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님)
+
 ### Test Infra & Wrapup SDD
 - **G0 — skip 범위 확정** ✅ → 42 passed, 0 skipped (T1/T2 이미 해결됨)
 - **T3 — `/collect` 실가동** ✅
@@ -43,17 +62,15 @@
   - **45 passed** (최종)
 
 ## 진행 중인 것
-- (없음)
+- **A4 — arXiv `/collect` 실가동** (사용자 확인 후 진행)
 
 ## 다음 단계
-- **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
-  - 전제: 모든 HTML 컬렉터가 `fetch_html` + `parse(soup)` 구조로 확정됨 (✅)
-- **arXiv / Hacker News 컬렉터 추가** (Collector Revival SDD §11)
-  - 공식 API 기반 → 스크래핑 리스크 없음
+1. **A4** — `/collect` 1회 실가동 → DB에 arXiv row 적재 확인 (`source="arXiv"` count > 0)
+2. **Hacker News 컬렉터** — 별도 SDD (A0~A4 절차 재사용)
+3. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
 
 ## 미결 결정사항
 - **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.
 - **Silent date fallback 가시화 (③ 공통 부채)**: `parse_date()`가 파싱 실패 시 `now_utc()`로 조용히 fallback. 소스마다 개별 수정 대신 **공통 경고 로그 레이어 추가**로 한 번에 해결 예정. P2 또는 전반 정리 라운드에서.
 - **P2 범위**: `BaseHtmlCollector` 상속 대상 확정 필요 (Anthropic, DeepMind, GitHub, Meta, Mistral 후보)
-- **arXiv·HN 착수 시점**: P2 전/후 사용자 결정 필요
 - **진행 방식(합의됨)**: 페이즈마다 멈춰서 확인. 그린이어도 자동 다음 페이즈 진행하지 않음.
