@@ -5,6 +5,7 @@ from app.infrastructure.collectors.anthropic_html_collector import AnthropicHtml
 from app.infrastructure.collectors.arxiv_api_collector import ArxivApiCollector
 from app.infrastructure.collectors.deepmind_html_collector import DeepmindHtmlCollector
 from app.infrastructure.collectors.github_trending_collector import GitHubTrendingCollector
+from app.infrastructure.collectors.hackernews_api_collector import HackerNewsApiCollector
 from app.infrastructure.collectors.huggingface_api_collector import HuggingFaceApiCollector
 from app.infrastructure.collectors.meta_html_collector import MetaHtmlCollector
 from app.infrastructure.collectors.mistral_html_collector import MistralHtmlCollector
@@ -28,6 +29,7 @@ async def trigger_collect() -> dict:
         "mistral": MistralHtmlCollector(),
         "huggingface": HuggingFaceApiCollector(),
         "github": GitHubTrendingCollector(),
+        "hackernews": HackerNewsApiCollector(),
     }
 
     results: dict[str, dict] = {}

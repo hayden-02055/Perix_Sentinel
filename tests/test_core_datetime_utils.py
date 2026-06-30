@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.core.datetime_utils import now_utc, parse_date, parse_struct_time
+from app.core.datetime_utils import from_epoch, now_utc, parse_date, parse_struct_time
 
 
 # ---------------------------------------------------------------------------
@@ -203,3 +203,19 @@ def test_parse_struct_time_preserves_seconds():
     dt = parse_struct_time(st)
     assert dt.second == 45
     assert dt.tzinfo is not None
+
+
+# ---------------------------------------------------------------------------
+# from_epoch (Hacker News `time` field — Unix epoch seconds)
+# ---------------------------------------------------------------------------
+
+def test_from_epoch_is_aware_utc():
+    dt = from_epoch(1782842392)
+    assert dt.tzinfo is not None
+    assert dt.utcoffset().total_seconds() == 0
+
+
+def test_from_epoch_known_value():
+    # 1782842392 == 2026-06-30T17:59:52Z (verified against HN API sample)
+    dt = from_epoch(1782842392)
+    assert dt == datetime(2026, 6, 30, 17, 59, 52, tzinfo=timezone.utc)

@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md`
 
 ## 완료된 것
 
@@ -44,8 +44,39 @@
   - `tests/test_arxiv_collector_golden.py`: feedparser.parse monkeypatch → 네트워크 없이 실행
   - **46 passed** (전체 회귀 포함)
 - **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅
-- **A4 — `/collect` 실가동**: 미수행 (사용자 확인 후 진행)
+- **A4 — `/collect` 실가동** ✅
+  - arXiv 50건 수집, 신규 50건 DB 적재, 5건 briefed
+  - DB `source='arXiv'` count = 50, URL/날짜 모두 정상 (aware UTC)
 - **arXiv 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님)
+
+### Hacker News Collector SDD
+- **A0 — API 응답 덤프 & 필드 확정** ✅ (2026-07-01)
+  - `time`은 **epoch 초** 확인 (1782842392 → 2026-06-30T17:59:52Z, 현재 날짜와 합치)
+  - 39개 샘플 중 1개(url 없는 "Tell HN" 자기글) → **HN 토론 링크 fallback 필요** 확정
+  - 39개 모두 `type=story` (job/poll 미관측, 필터는 유지)
+  - 전체 키: `score, type, time, text, title, descendants, id, kids, by, url`
+- **A1 — `HackerNewsApiCollector` 구현** ✅
+  - `app/infrastructure/collectors/hackernews_api_collector.py`
+  - 2단계 호출(topstories → item) 모두 공통 `fetch_json` 경유, 직접 httpx 0건
+  - `N_TOP=100`, 동시성 `Semaphore(10)`로 매너 throttle
+  - AI 키워드 필터: `\b` 단어경계 정규식, 컬렉터 자체 상수(`AI_KEYWORDS`, `KEYWORD_WEIGHTS` 비의존)
+  - `url` 없으면 `https://news.ycombinator.com/item?id={id}` fallback
+  - `score`/`descendants`/`by`/`hn_id`/`type` → metadata 보존 (나중 popularity 재료)
+- **A1.5 — `datetime_utils.from_epoch()` 신설** ✅
+  - `app/core/datetime_utils.py`에 공통 함수 추가, 인라인 변환 0건
+  - `tests/test_core_datetime_utils.py`: 2 tests 추가 (aware 확인 + 알려진 값 검증)
+- **A2 — `collect.py` 등록** ✅
+  - `"hackernews": HackerNewsApiCollector()` 한 줄 추가
+- **A3 — 골든 fixture 테스트** ✅
+  - `tests/fixtures/hackernews_topstories.json` + `hackernews_item_{101,102,103,104}.json` + `hackernews.golden.json`
+  - 케이스 매트릭스: AI+url(101) / AI+self-post→fallback(102) / 비AI 필터아웃(103) / job타입 필터아웃(104, 제목에 "AI" 포함해도 걸러짐)
+  - `tests/test_hackernews_collector_golden.py`: `mock_http`로 topstories+item 4건 URL 분기 모킹
+  - **49 passed** (전체 회귀 포함)
+- **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅
+- **A4 — `/collect` 실가동** ✅
+  - HN 12건 수집(topstories 100개 중 AI 필터 통과), 신규 10건 DB 적재
+  - 실제 적재 예: "Claude Science", "Claude Code is steganographically marking requests", "New Claude app strings, Fable 5 coming back..." 등 — 필터 정확도 육안 확인
+- **HN 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님). `score`/`descendants`는 metadata에 보존되어 나중 popularity 설계 시 재사용 가능.
 
 ### Test Infra & Wrapup SDD
 - **G0 — skip 범위 확정** ✅ → 42 passed, 0 skipped (T1/T2 이미 해결됨)
@@ -62,15 +93,16 @@
   - **45 passed** (최종)
 
 ## 진행 중인 것
-- **A4 — arXiv `/collect` 실가동** (사용자 확인 후 진행)
+- (없음)
 
 ## 다음 단계
-1. **A4** — `/collect` 1회 실가동 → DB에 arXiv row 적재 확인 (`source="arXiv"` count > 0)
-2. **Hacker News 컬렉터** — 별도 SDD (A0~A4 절차 재사용)
-3. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
+- Tier1 원천 라인업 일단락 (arXiv·HN까지 안정 API 소스 9/9 확보). 갈림길:
+  1. **Tier2(뉴스레터·미디어) 수집** — 비교군 데이터, 스코어링 재설계 재료 확보
+  2. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
 
 ## 미결 결정사항
 - **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.
 - **Silent date fallback 가시화 (③ 공통 부채)**: `parse_date()`가 파싱 실패 시 `now_utc()`로 조용히 fallback. 소스마다 개별 수정 대신 **공통 경고 로그 레이어 추가**로 한 번에 해결 예정. P2 또는 전반 정리 라운드에서.
 - **P2 범위**: `BaseHtmlCollector` 상속 대상 확정 필요 (Anthropic, DeepMind, GitHub, Meta, Mistral 후보)
+- **HN `AI_KEYWORDS` 출처**: 컬렉터 자체 상수로 박음(SDD §5 권고). `scoring_policies.KEYWORD_WEIGHTS`와 키 목록이 미래에 갈라질 수 있음 — Tier1↔Tier2 재설계 시 통합 여부 재논의 필요.
 - **진행 방식(합의됨)**: 페이즈마다 멈춰서 확인. 그린이어도 자동 다음 페이즈 진행하지 않음.

@@ -1,0 +1,32 @@
+[
+  {
+    "source": "Hacker News",
+    "title": "Claude Sonnet 5 Released",
+    "url": "https://www.anthropic.com/news/claude-sonnet-5",
+    "published_at": "2026-06-30T17:59:52",
+    "summary": "",
+    "tags": ["hackernews", "story", "claude"],
+    "metadata": {
+      "score": 450,
+      "descendants": 120,
+      "by": "alice",
+      "hn_id": 101,
+      "type": "story"
+    }
+  },
+  {
+    "source": "Hacker News",
+    "title": "Ask HN: Best way to fine-tune an LLM on a budget?",
+    "url": "https://news.ycombinator.com/item?id=102",
+    "published_at": "2026-06-30T16:59:00",
+    "summary": "I want to fine-tune a small LLM for my hobby project, any tips?",
+    "tags": ["hackernews", "story", "llm"],
+    "metadata": {
+      "score": 30,
+      "descendants": 12,
+      "by": "bob",
+      "hn_id": 102,
+      "type": "story"
+    }
+  }
+]

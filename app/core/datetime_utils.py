@@ -44,6 +44,11 @@ def parse_date(raw: str, formats: tuple[str, ...] = ()) -> datetime:
     return now_utc()
 
 
+def from_epoch(ts: int) -> datetime:
+    """Convert a Unix epoch (seconds) to an aware UTC datetime."""
+    return datetime.fromtimestamp(ts, tz=timezone.utc)
+
+
 def parse_struct_time(st: _time.struct_time) -> datetime:
     """Convert a feedparser ``time.struct_time`` (UTC) to an aware UTC datetime.
 
