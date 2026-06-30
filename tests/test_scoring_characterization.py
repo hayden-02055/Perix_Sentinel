@@ -7,7 +7,7 @@ recency deterministic.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -122,3 +122,50 @@ def test_apply_score_mutates_item():
 )
 def test_classify_importance_thresholds(score, label):
     assert classify_importance(score) == label
+
+
+# ── Regression: aware UTC now + aware UTC published_at must not raise ────────
+
+NOW_UTC = datetime(2026, 7, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+
+def test_recency_score_aware_now_and_aware_published():
+    """Production path: both now and published_at are timezone-aware UTC."""
+    item = CollectedItem(
+        source="OpenAI",
+        title="t",
+        url="u",
+        published_at=datetime(2026, 7, 1, 0, 0, tzinfo=timezone.utc),
+        summary="",
+        tags=[],
+    )
+    b = calculate_score(item, now=NOW_UTC)
+    assert b.recency_score == 5
+
+
+def test_recency_score_naive_now_and_naive_published():
+    """Legacy path (test fixtures): both naive — same score as before P1."""
+    item = CollectedItem(
+        source="OpenAI",
+        title="t",
+        url="u",
+        published_at=datetime(2026, 7, 1, 0, 0),
+        summary="",
+        tags=[],
+    )
+    b = calculate_score(item, now=NOW)
+    assert b.recency_score == 5
+
+
+def test_recency_score_aware_now_and_naive_published():
+    """Mixed path: now aware, published naive — should not raise."""
+    item = CollectedItem(
+        source="OpenAI",
+        title="t",
+        url="u",
+        published_at=datetime(2026, 7, 1, 0, 0),
+        summary="",
+        tags=[],
+    )
+    b = calculate_score(item, now=NOW_UTC)
+    assert b.recency_score == 5

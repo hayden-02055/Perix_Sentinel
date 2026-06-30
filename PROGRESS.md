@@ -1,7 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md`
-원칙: 모든 변경은 "입력 같으면 출력 같다"(behavior-preserving). 동작 변경은 Non-Goal.
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md`
 
 ## 완료된 것
 
@@ -17,35 +16,44 @@
   - 전 컬렉터 7개 이전 완료: `datetime.utcnow()` 0건, `import requests` 0건, `aware UTC` 전면 통일
   - `scoring_engine`, `sqlite_item_repository`의 `utcnow` → `now_utc` 완료
   - `tests/test_core_datetime_utils.py`: 23 tests (소스별 날짜 포맷, struct_time, fallback)
-  - **37 passed** (P1 완료 시점)
 
 ### Collector Revival SDD
 - **D0 — 진단** ✅ (2026-07-01)
-  - 결과: GitHub(19건)·HuggingFace(10건)·DeepMind(24건)·Meta(10건) — 이미 정상 동작
-  - **Mistral 0건** → **F3**: Next.js → Astro 프레임워크 전환으로 `__next_f` 임베디드 JSON 소멸
-- **D3 — Mistral 파서 재작성 (F3 수리)** ✅
-  - 구: Next.js `__next_f` push 스크립트 파싱 (동작 불가)
-  - 신: `article[data-title]` 75개, `footer p` 날짜 ("June 23, 2026"), `h2` 제목, content `p` 설명
-  - 날짜 포맷 `"%B %d, %Y"` → aware UTC 정상 파싱
-  - Live 검증: 75건 수집 확인
-- **D5 — Mistral 골든 fixture 테스트** ✅
+  - GitHub·HuggingFace·DeepMind·Meta → 정상
+  - **Mistral 0건 → F3**: Next.js → Astro 전환으로 `__next_f` 임베디드 JSON 소멸
+- **D3 — Mistral 파서 재작성** ✅
+  - `article[data-title]` 75개, `footer p` 날짜("June 23, 2026"), `h2` 제목, content `p` 설명
+  - `urljoin` 사용으로 href 조립 견고화
+- **D5 — Mistral 골든 fixture** ✅
   - `tests/fixtures/mistral_news.html` (444KB) + `mistral_news.golden.json` (75건)
-  - `tests/test_mistral_collector_golden.py`: 5개 테스트 (golden match · aware UTC · mistral 태그 · URL 중복 없음)
-  - **42 passed**
+  - `tests/test_mistral_collector_golden.py`: 5개 테스트
+
+### Test Infra & Wrapup SDD
+- **G0 — skip 범위 확정** ✅ → 42 passed, 0 skipped (T1/T2 이미 해결됨)
+- **T3 — `/collect` 실가동** ✅
+  - 버그 발견: `scoring_engine._recency_score`가 `now`(aware) - `published`(naive) → `TypeError`
+  - **수정**: `now.tzinfo`와 `published.tzinfo`를 같은 aware 상태로 정규화 후 비교
+  - **결과**: 7/7 소스 DB 적재 성공. DoD(≥6개) 충족.
+  - DB 현황: OpenAI 1037·Mistral 75·DeepMind 24·GitHub 19·Anthropic 25·HuggingFace 10·Meta 10
+- **T4 — 리뷰 지적 처리** ✅
+  - ② `urljoin` 적용 완료 (Mistral 컬렉터)
+  - ③ silent date fallback → **공통 부채로 등록** (아래 미결 참조)
+- **회귀 테스트 추가** ✅
+  - `test_scoring_characterization.py`에 aware/naive 조합 3가지 회귀 케이스 추가
+  - **45 passed** (최종)
 
 ## 진행 중인 것
 - (없음)
 
 ## 다음 단계
 - **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
-  - 전제: 모든 컬렉터가 `fetch_html` + `parse(soup)` 구조로 확정됨 (✅)
-  - 대상: Anthropic, DeepMind, GitHub, Meta, Mistral
+  - 전제: 모든 HTML 컬렉터가 `fetch_html` + `parse(soup)` 구조로 확정됨 (✅)
 - **arXiv / Hacker News 컬렉터 추가** (Collector Revival SDD §11)
-  - 둘 다 공식 API 기반 → 스크래핑 리스크 없음
-  - 선행 조건: 현재 컬렉터 부활 완료 (✅)
+  - 공식 API 기반 → 스크래핑 리스크 없음
 
 ## 미결 결정사항
-- **P2 범위 확정**: `BaseHtmlCollector`로 슬림화할 컬렉터 목록과 `parse()` 시그니처 합의 필요
-- **arXiv·HN 착수 시점**: Collector Revival SDD는 완료이나 P2(Refactoring)와 arXiv·HN 추가 중 우선순위 사용자 결정 필요
-- **Mistral F3 결정 근거 기록**: Next.js→Astro 전환. 새 구조(정적 HTML)가 임베디드 JSON보다 안정적이므로 headless 없이 해결. PROGRESS에 기록 완료.
+- **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.
+- **Silent date fallback 가시화 (③ 공통 부채)**: `parse_date()`가 파싱 실패 시 `now_utc()`로 조용히 fallback. 소스마다 개별 수정 대신 **공통 경고 로그 레이어 추가**로 한 번에 해결 예정. P2 또는 전반 정리 라운드에서.
+- **P2 범위**: `BaseHtmlCollector` 상속 대상 확정 필요 (Anthropic, DeepMind, GitHub, Meta, Mistral 후보)
+- **arXiv·HN 착수 시점**: P2 전/후 사용자 결정 필요
 - **진행 방식(합의됨)**: 페이즈마다 멈춰서 확인. 그린이어도 자동 다음 페이즈 진행하지 않음.

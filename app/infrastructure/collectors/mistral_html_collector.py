@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from bs4 import Tag
 
 from app.core.datetime_utils import parse_date
@@ -71,7 +73,7 @@ class MistralHtmlCollector(CollectorPort):
         href: str = anchor.get("href", "")
         if not href:
             return None
-        url = BASE_URL + href if href.startswith("/") else href
+        url = urljoin(BASE_URL, href)
 
         title_el = art.find(["h2", "h3", "h4"])
         title = title_el.get_text(strip=True) if title_el else art.get("data-title", "").title()

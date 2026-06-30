@@ -69,8 +69,13 @@ def _popularity_score(item: CollectedItem) -> int:
 
 def _recency_score(item: CollectedItem, now: datetime) -> int:
     published = item.published_at
-    if published.tzinfo is not None:
+    # Normalise so both operands share the same tz-awareness before subtraction.
+    # Tests inject naive `now` + naive `published_at`; production uses aware UTC.
+    if now.tzinfo is None and published.tzinfo is not None:
         published = published.replace(tzinfo=None)
+    elif now.tzinfo is not None and published.tzinfo is None:
+        from datetime import timezone
+        published = published.replace(tzinfo=timezone.utc)
     age_days = (now - published).total_seconds() / 86400
     if age_days <= 1:
         return 5
