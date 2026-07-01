@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md`
 
 ## 완료된 것
 
@@ -117,11 +117,38 @@
   - `test_scoring_characterization.py`에 aware/naive 조합 3가지 회귀 케이스 추가
   - **45 passed** (최종)
 
+### Google Research Collector SDD
+- **A0 — 피드 덤프 & 필드 확정** ✅ (2026-07-01)
+  - Canonical `https://research.google/blog/rss` ✅ RSS 2.0, bozo=False
+  - `published_parsed` struct_time 정상 → `parse_struct_time` 그대로
+  - `entry.tags` 있음, `term` 키 소문자화
+  - **비-AI 비율 25% (>15% 임계값) → 필터 적용** (SDD §7)
+  - 피드 100건 → `MAX_ITEMS=50` 추가
+  - summary = 카테고리 이름 텍스트만(짧음) → 원문 그대로 (비범위)
+- **A1 — `GoogleResearchRssCollector` 구현** ✅
+  - `app/infrastructure/collectors/google_research_rss_collector.py`
+  - `NvidiaRssCollector` 기반, `RSS_URL`, `source="Google Research"`, `MAX_ITEMS=50` 교체
+  - `_AI_CATEGORIES` 화이트리스트(machine intelligence, generative ai, nlp, open source models & datasets, responsible ai) + `_AI_KEYWORD_RE` 제목 폴백
+  - `tags = ["google-research"] + categories`, `metadata`: `function/domain(core-lab)/region/feed` 4개 고정
+- **A2 — `collect.py` 등록** ✅
+  - `"google_research": GoogleResearchRssCollector()` 한 줄 추가
+- **A3 — 골든 fixture 테스트** ✅
+  - `tests/fixtures/google_research_feed.xml` (4건: AI 통과 3건 + 비-AI 필터아웃 1건) + `google_research_feed.golden.json`
+  - `tests/test_google_research_collector_golden.py`: 2개 테스트 (golden match + non-AI filtered)
+  - **52 passed** (전체 회귀 포함)
+- **A4 — `/collect` 실가동** ✅
+  - Google Research 45건 수집, 신규 44건 DB 적재. URL/날짜 모두 정상 (aware UTC `+00:00`)
+  - `metadata = {"function":"origin","domain":"core-lab","region":"us","feed":"research-blog"}` 확인
+  - `tags` 예시: `["google-research","climate & sustainability","earth ai","open source models & datasets"]` 정상
+- **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅
+- **Google Research 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님). Tier2 재보정 시 처리.
+- **DeepMind 의미중복**: `deepmind.google`와 `research.google`는 별개 조직·별개 소스로 유지. URL이 달라 url_hash dedup 미발동 → 의미 중복 병합은 Clusterer로 이월.
+
 ## 진행 중인 것
 - (없음)
 
 ## 다음 단계
-- Tier1 origin 라인업 완료 (NVIDIA 추가로 hardware 도메인 첫 소스 확보). 갈림길:
+- Tier1 origin 라인업 완료 (NVIDIA + Google Research 추가). 갈림길:
   1. **Tier2(뉴스레터·미디어) 수집** — 비교군 데이터, 스코어링 재설계 재료 확보
   2. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
 

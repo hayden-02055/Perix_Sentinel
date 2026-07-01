@@ -1,0 +1,59 @@
+[
+  {
+    "source": "Google Research",
+    "title": "Expanding our Heat Resilience data to 50+ global cities",
+    "url": "https://research.google/blog/expanding-our-heat-resilience-data-to-50-global-cities/",
+    "published_at": "2026-06-30T17:03:10+00:00",
+    "summary": "Climate & Sustainability",
+    "tags": [
+      "google-research",
+      "climate & sustainability",
+      "earth ai",
+      "open source models & datasets"
+    ],
+    "metadata": {
+      "function": "origin",
+      "domain": "core-lab",
+      "region": "us",
+      "feed": "research-blog"
+    }
+  },
+  {
+    "source": "Google Research",
+    "title": "Introducing TabFM: A zero-shot foundation model for tabular data",
+    "url": "https://research.google/blog/introducing-tabfm-a-zero-shot-foundation-model-for-tabular-data/",
+    "published_at": "2026-06-30T10:26:00+00:00",
+    "summary": "Data Management",
+    "tags": [
+      "google-research",
+      "data management",
+      "machine intelligence",
+      "product"
+    ],
+    "metadata": {
+      "function": "origin",
+      "domain": "core-lab",
+      "region": "us",
+      "feed": "research-blog"
+    }
+  },
+  {
+    "source": "Google Research",
+    "title": "Accelerating Gemini Nano models on Pixel with frozen Multi-Token Prediction",
+    "url": "https://research.google/blog/accelerating-gemini-nano-models-on-pixel-with-frozen-multi-token-prediction/",
+    "published_at": "2026-06-26T18:30:00+00:00",
+    "summary": "Machine Intelligence",
+    "tags": [
+      "google-research",
+      "machine intelligence",
+      "mobile systems",
+      "natural language processing"
+    ],
+    "metadata": {
+      "function": "origin",
+      "domain": "core-lab",
+      "region": "us",
+      "feed": "research-blog"
+    }
+  }
+]
