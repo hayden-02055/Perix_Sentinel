@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md`
 
 ## 완료된 것
 
@@ -78,6 +78,31 @@
   - 실제 적재 예: "Claude Science", "Claude Code is steganographically marking requests", "New Claude app strings, Fable 5 coming back..." 등 — 필터 정확도 육안 확인
 - **HN 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님). `score`/`descendants`는 metadata에 보존되어 나중 popularity 설계 시 재사용 가능.
 
+### NVIDIA Collector SDD
+- **A0 — 피드 덤프 & 필드 확정** ✅ (2026-07-01)
+  - Atom 포맷, `published_parsed` struct_time 정상 채워짐 → `parse_struct_time` 그대로 사용
+  - `entry.tags` 존재, `term` 키 → 소문자화 후 tags 리스트에 추가
+  - 100건 중 비-AI 4건(4%) → **필터 없음** (SDD §7: <10% 기준 충족)
+  - 피드 100건으로 예상(10~30건) 초과 → `MAX_ITEMS=50` 추가
+  - summary 필드: HTML 혼입(img 태그) → 원문 그대로 (요약 비범위)
+- **A1 — `NvidiaRssCollector` 구현** ✅
+  - `app/infrastructure/collectors/nvidia_rss_collector.py`
+  - `OpenAIRssCollector` 기반, `RSS_URL`, `source="NVIDIA"`, `MAX_ITEMS=50` 교체
+  - `tags = ["nvidia"] + categories` (feedparser entry.tags → term 소문자화)
+  - `metadata`: `function/domain/region/feed` 4개 고정
+- **A2 — `collect.py` 등록** ✅
+  - `"nvidia": NvidiaRssCollector()` 한 줄 추가
+- **A3 — 골든 fixture 테스트** ✅
+  - `tests/fixtures/nvidia_feed.xml` (3건 실제 Atom 스냅샷) + `nvidia_feed.golden.json`
+  - `tests/test_nvidia_collector_golden.py`: feedparser.parse monkeypatch → 네트워크 없이 실행
+  - **50 passed** (전체 회귀 포함)
+- **A4 — `/collect` 실가동** ✅
+  - NVIDIA 50건 수집, 신규 50건 DB 적재. URL/날짜 모두 정상 (aware UTC `+00:00`)
+  - `metadata = {"function":"origin","domain":"hardware","region":"us","feed":"developer-blog"}` 확인
+  - `tags` 예시: `["nvidia","data center / cloud","data science","cuda-x",...]` 정상
+- **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅
+- **NVIDIA 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님). Tier2 재보정 시 처리.
+
 ### Test Infra & Wrapup SDD
 - **G0 — skip 범위 확정** ✅ → 42 passed, 0 skipped (T1/T2 이미 해결됨)
 - **T3 — `/collect` 실가동** ✅
@@ -96,7 +121,7 @@
 - (없음)
 
 ## 다음 단계
-- Tier1 원천 라인업 일단락 (arXiv·HN까지 안정 API 소스 9/9 확보). 갈림길:
+- Tier1 origin 라인업 완료 (NVIDIA 추가로 hardware 도메인 첫 소스 확보). 갈림길:
   1. **Tier2(뉴스레터·미디어) 수집** — 비교군 데이터, 스코어링 재설계 재료 확보
   2. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
 

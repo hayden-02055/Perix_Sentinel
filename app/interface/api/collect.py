@@ -9,6 +9,7 @@ from app.infrastructure.collectors.hackernews_api_collector import HackerNewsApi
 from app.infrastructure.collectors.huggingface_api_collector import HuggingFaceApiCollector
 from app.infrastructure.collectors.meta_html_collector import MetaHtmlCollector
 from app.infrastructure.collectors.mistral_html_collector import MistralHtmlCollector
+from app.infrastructure.collectors.nvidia_rss_collector import NvidiaRssCollector
 from app.infrastructure.collectors.openai_rss_collector import OpenAIRssCollector
 from app.infrastructure.publishers.discord_publisher import DiscordPublisher
 from app.infrastructure.repositories.sqlite_item_repository import SqliteItemRepository
@@ -30,6 +31,7 @@ async def trigger_collect() -> dict:
         "huggingface": HuggingFaceApiCollector(),
         "github": GitHubTrendingCollector(),
         "hackernews": HackerNewsApiCollector(),
+        "nvidia": NvidiaRssCollector(),
     }
 
     results: dict[str, dict] = {}
