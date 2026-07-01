@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md`
 
 ## 완료된 것
 
@@ -144,13 +144,37 @@
 - **Google Research 점수 0**: `SOURCE_WEIGHTS`에 없어 source 점수 0 → **의도된 비범위**(버그 아님). Tier2 재보정 시 처리.
 - **DeepMind 의미중복**: `deepmind.google`와 `research.google`는 별개 조직·별개 소스로 유지. URL이 달라 url_hash dedup 미발동 → 의미 중복 병합은 Clusterer로 이월.
 
+### HF Region Tagging SDD
+- **A0 — 실제 HF author 핸들 표기 확인** ✅ (2026-07-01)
+  - author = `model_id.split("/")[0]` 원래 대소문자 그대로 (`Qwen`, `zai-org`)
+  - `_derive_region`에서 `author.lower()`로 정규화 → SDD 상수 그대로 사용 가능
+  - A0 실측에서 `baidu`(중국 조직) 트렌딩 등장 → SDD 미포함이므로 구현엔 미추가, 미결에 기록
+- **A1+A2 — `HuggingFaceApiCollector` 수정** ✅
+  - `_ORG_REGION` (조직 핸들 → region, 정확 일치), `_FAMILY_REGION` (모델 패밀리 substring → region, 2차) 상수 추가
+  - `_derive_region(author, model_id)`: 1차(org) → 2차(substring) → `global` 폴백
+  - metadata에 `function=origin`, `domain=ecosystem`, `region=<파생>` 추가
+- **A3 — HF 골든 fixture 신규 작성** ✅
+  - `tests/fixtures/huggingface_trending.json` (4건: cn조직/cn재업로드/us/global)
+  - `tests/fixtures/huggingface_trending.golden.json`
+  - `tests/test_huggingface_collector_golden.py`: 6개 테스트 (golden match + 4 region 케이스 + function/domain 전체 확인)
+  - **58 passed** (전체 회귀 포함)
+- **A4 — 실가동 확인** ✅
+  - `zai-org/GLM-5.2` → region=cn (1차 org) ✅
+  - `Qwen/Qwen-AgentWorld-35B-A3B` → region=cn (1차 org, Qwen→lower 정규화) ✅
+  - `yuxinlu1/gemma-4-12B-...` → region=us (2차 substring `gemma`) ✅
+  - `function=origin`, `domain=ecosystem` 전 항목 정상 ✅
+- **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅
+- **HF region=global 기본값**: 알 수 없는 조직은 `global` — HF 전역 허브 성격 반영 (의도된 설계)
+- **타 컬렉터 region 백필은 별건**: OpenAI(`us`)·arXiv(`global`) 등 기존 컬렉터 `function/domain/region` 소급은 다음 작업으로 분리
+
 ## 진행 중인 것
 - (없음)
 
 ## 다음 단계
-- Tier1 origin 라인업 완료 (NVIDIA + Google Research 추가). 갈림길:
-  1. **Tier2(뉴스레터·미디어) 수집** — 비교군 데이터, 스코어링 재설계 재료 확보
-  2. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
+- Tier1 origin 라인업 + HF region 태깅 완료. 갈림길:
+  1. **타 컬렉터 region 백필 (SDD §8)** — OpenAI·Anthropic·arXiv·HN 등 기존 컬렉터에 `function/domain/region` 상수 태그 추가 (HF와 달리 전부 상수라 간단)
+  2. **Tier2(뉴스레터·미디어) 수집** — 비교군 데이터, 스코어링 재설계 재료 확보
+  3. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
 
 ## 미결 결정사항
 - **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.
@@ -158,3 +182,5 @@
 - **P2 범위**: `BaseHtmlCollector` 상속 대상 확정 필요 (Anthropic, DeepMind, GitHub, Meta, Mistral 후보)
 - **HN `AI_KEYWORDS` 출처**: 컬렉터 자체 상수로 박음(SDD §5 권고). `scoring_policies.KEYWORD_WEIGHTS`와 키 목록이 미래에 갈라질 수 있음 — Tier1↔Tier2 재설계 시 통합 여부 재논의 필요.
 - **진행 방식(합의됨)**: 페이즈마다 멈춰서 확인. 그린이어도 자동 다음 페이즈 진행하지 않음.
+- **`baidu` HF region 미포함**: A0에서 `baidu/Unlimited-OCR`이 트렌딩에 등장. `baidu`는 중국 조직이나 SDD `_ORG_REGION` 목록에 없어 현재 `global`. `_ORG_REGION` 확장 시 추가 필요.
+- **타 컬렉터 region 백필 미구현**: OpenAI·Anthropic·arXiv·HN·NVIDIA·GR 등 기존 컬렉터에 `function/domain/region` 상수 태그 없음. SDD §8 다음 작업으로 분리됨.

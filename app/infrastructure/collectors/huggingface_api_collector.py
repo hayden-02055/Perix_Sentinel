@@ -29,6 +29,64 @@ _PIPELINE_TAG_MAP: dict[str, str] = {
     "text-to-speech": "audio",
 }
 
+# Organisation handle → region (exact match, compared lowercase).
+# Maintenance target: add new org handles here as new labs emerge.
+_ORG_REGION: dict[str, str] = {
+    # ── China ──
+    "deepseek-ai": "cn",
+    "qwen": "cn",           # Alibaba
+    "zai-org": "cn",        # Z.ai / Zhipu
+    "thudm": "cn",          # GLM (Tsinghua)
+    "zhipuai": "cn",
+    "moonshotai": "cn",     # Kimi
+    "01-ai": "cn",          # Yi
+    "baichuan-inc": "cn",
+    "internlm": "cn",
+    "tencent": "cn",        # Hunyuan
+    "bytedance-seed": "cn",
+    "minimaxai": "cn",
+    "stepfun-ai": "cn",
+    "openbmb": "cn",        # MiniCPM
+    "xiaomimimo": "cn",
+    # ── US ── (accuracy anchors)
+    "meta-llama": "us",
+    "google": "us",
+    "microsoft": "us",
+    "openai": "us",
+    "nvidia": "us",
+    # ── EU ──
+    "mistralai": "eu",
+}
+
+# Model-family substring → region (re-upload rescue, 2nd signal).
+# Checked only when org handle lookup misses.
+_FAMILY_REGION: list[tuple[str, str]] = [
+    ("deepseek", "cn"),
+    ("qwen", "cn"),
+    ("glm", "cn"),
+    ("kimi", "cn"),
+    ("yi-", "cn"),
+    ("baichuan", "cn"),
+    ("internlm", "cn"),
+    ("minicpm", "cn"),
+    ("llama", "us"),
+    ("gemma", "us"),
+    ("phi", "us"),
+    ("mistral", "eu"),
+    ("mixtral", "eu"),
+]
+
+
+def _derive_region(author: str, model_id: str) -> str:
+    a = author.lower().strip()
+    if a in _ORG_REGION:
+        return _ORG_REGION[a]
+    mid = model_id.lower()
+    for needle, region in _FAMILY_REGION:
+        if needle in mid:
+            return region
+    return "global"
+
 
 def _build_tags(model_id: str, pipeline_tag: str | None, raw_tags: list[str]) -> list[str]:
     tags = ["huggingface"]
@@ -94,6 +152,9 @@ class HuggingFaceApiCollector(CollectorPort):
                         "downloads": downloads,
                         "pipeline_tag": pipeline_tag or "",
                         "author": author,
+                        "function": "origin",
+                        "domain": "ecosystem",
+                        "region": _derive_region(author, model_id),
                     },
                 )
             )
