@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>TechCrunch &raquo; Artificial Intelligence</title>
+    <link>https://techcrunch.com/category/artificial-intelligence/</link>
+    <description>TechCrunch AI news and analysis</description>
+    <item>
+      <title>OpenAI Releases New Reasoning Model GPT-5</title>
+      <link>https://techcrunch.com/2026/06/30/openai-gpt5-reasoning-model/</link>
+      <pubDate>Mon, 30 Jun 2026 10:00:00 +0000</pubDate>
+      <description>OpenAI has released GPT-5, its latest reasoning model with significant improvements in complex problem solving and agent workflows.</description>
+    </item>
+    <item>
+      <title>Anthropic Launches Claude 5 With Improved Agent Capabilities</title>
+      <link>https://techcrunch.com/2026/06/29/anthropic-claude5-agent/</link>
+      <pubDate>Sun, 29 Jun 2026 15:30:00 +0000</pubDate>
+      <description>Anthropic has launched Claude 5, featuring enhanced agent capabilities and improved performance on coding and analysis tasks.</description>
+    </item>
+    <item>
+      <title>Google DeepMind Unveils Gemini Ultra 2 Benchmark Results</title>
+      <link>https://techcrunch.com/2026/06/28/deepmind-gemini-ultra-2/</link>
+      <pubDate>Sat, 28 Jun 2026 09:00:00 +0000</pubDate>
+      <description>Google DeepMind has shared benchmark results for Gemini Ultra 2, demonstrating state-of-the-art performance across multiple AI evaluation suites.</description>
+    </item>
+  </channel>
+</rss>

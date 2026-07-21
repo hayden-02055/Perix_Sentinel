@@ -1,7 +1,7 @@
 # Perix Sentinel — 컬렉터 정리본
 
 > AI 생태계 신호 수집 컬렉터 전체 현황.
-> 최종 갱신: 2026-07-01
+> 최종 갱신: 2026-07-04 (TechCrunch coverage 컬렉터 추가 — store-only 배선)
 
 ---
 
@@ -12,7 +12,7 @@
 | 축 | 값 | 의미 |
 |---|---|---|
 | **function** | `origin` / `coverage` | 사건을 **생성**하는가, 사건을 **커버(교차보도)**하는가 |
-| **domain** | `core-lab` / `hardware` / `academia` / `ecosystem` / `community` | 소스의 성격 |
+| **domain** | `core-lab` / `hardware` / `academia` / `ecosystem` / `community` / `media` | 소스의 성격 |
 | **region** | `us` / `eu` / `cn` / `ca` / `global` | 소속 지역 |
 
 ### domain 정의
@@ -22,12 +22,13 @@
 - `academia` — 논문·대학 랩 (arXiv)
 - `ecosystem` — 모델/코드/툴 배포 허브 (HuggingFace·GitHub)
 - `community` — 토론·큐레이션 (Hacker News·Reddit)
+- `media` — 기술 미디어 (TechCrunch·MIT TR·The Verge 등) — `function=coverage` 전용
 
 > **function 원칙**: origin만 "사건(event)"을 생성한다. coverage는 항목을 만들지 않고, origin 사건에 매칭시켜 "몇 곳이 다뤘나"로 중요도를 가산한다. (스코어링은 Tier2 통합 후 설계)
 
 ---
 
-## 1. 현재 컬렉터 (11개) — Tier 1 완료
+## 1. 현재 컬렉터 (12개) — Tier 1 완료 + Tier 2 첫 coverage
 
 | # | 컬렉터 | 소스 | domain | region | function | 수집 방식 | 상태 |
 |---|---|---|---|---|---|---|---|
@@ -42,12 +43,14 @@
 | 9 | ArxivApiCollector | arxiv.org | `academia` | `global` | origin | API | ✅ live |
 | 10 | HackerNewsApiCollector | news.ycombinator.com | `community` | `global` | origin | Firebase API | ✅ live |
 | 11 | NvidiaRssCollector | developer.nvidia.com | `hardware` | `us` | origin | RSS | ✅ live |
+| 12 | TechCrunchRssCollector | techcrunch.com (AI) | `media` | `us` | coverage | RSS | ✅ live (store-only²) |
 
 > ¹ HuggingFace region은 고정값이 아니라 **조직 핸들·모델명에서 파생**. `_ORG_REGION` 조직 매핑 → `_FAMILY_REGION` substring 폴백 → `global`. 중국 랩(`zai-org`, `Qwen` 등) → `cn`, 미국 랩(`meta-llama`) → `us`, EU(`mistralai`) → `eu`, 미식별 → `global`.
+> ² TechCrunch는 `POST /collect/coverage`(`publisher=None`)로 실행 → DB 적재만, 브리핑 없음. Clusterer 완성 전까지 이 상태 유지.
 
 **현황 요약**
-- 11개 소스 라이브, DB 2,000+ rows, 파이프라인 e2e 동작
-- 도메인 커버리지: `core-lab` 5개(Anthropic·OpenAI·Mistral·Meta·DeepMind) + `core-lab` 1개(Google Research) + `hardware` 1개(NVIDIA) + `ecosystem` 2개 + `academia` 1개 + `community` 1개
+- 12개 소스 라이브 (origin 11개 + coverage 1개)
+- 도메인 커버리지: `core-lab` 5개(Anthropic·OpenAI·Mistral·Meta·DeepMind) + `core-lab` 1개(Google Research) + `hardware` 1개(NVIDIA) + `ecosystem` 2개 + `academia` 1개 + `community` 1개 + `media` 1개(TechCrunch)
 - 중국 랩 커버: HF region 파생으로 흡수 (§3 참조)
 - HTML 파싱(1·3·4·5·7)은 구조 변경 시 취약 → 유지보수 부채
 
@@ -96,20 +99,62 @@ DeepSeek · Qwen(Alibaba) · GLM(Zhipu) · Kimi(Moonshot) 는 **자체 공개 RS
 2. ~~NvidiaRssCollector~~ — `hardware` 도메인 첫 소스, RSS 기반 ✅
 3. ~~HF 컬렉터 `region=cn` 태깅~~ — 조직명+모델명 파생으로 중국 랩 커버 완료 ✅
 4. ~~GoogleResearchRssCollector~~ — `core-lab` 보강, 비-AI 25% → 카테고리 화이트리스트 필터 적용 ✅
+5. ~~TechCrunchRssCollector~~ — 첫 `coverage` 소스. `/collect/coverage`(`publisher=None`) store-only 배선. `domain=media` 신규 도입 ✅
 
 남은 작업:
-5. **타 컬렉터 function/domain/region 백필** — OpenAI·Anthropic·Mistral·Meta·DeepMind·GitHub·arXiv·HN. 전부 상수라 간단하나 범위 분리됨.
-6. **(후순위)** AMD·xAI·Cohere — HTML/피드없음 리스크가 있어 검증 후 진행
-7. **(Tier2)** coverage 소스 설계 — 뉴스레터·미디어 추가 전 function=coverage 파이프라인 설계 필요
+6. **타 컬렉터 function/domain/region 백필** — OpenAI·Anthropic·Mistral·Meta·DeepMind·GitHub·arXiv·HN. 전부 상수라 간단하나 범위 분리됨.
+7. **(후순위)** AMD·xAI·Cohere — HTML/피드없음 리스크가 있어 검증 후 진행
+8. **(Tier2)** 나머지 coverage 소스 4개(MIT TR·The Verge·MarkTechPost·The Decoder) — 각각 별도 SDD
+9. **(Tier2)** Clusterer + Event 모델 설계(§6) → coverage 매칭 활성화
 
 ---
 
-## 5. 참고: 스코어보드(coverage) 소스 — 아직 미착수
+## 5. Tier2 — coverage 소스 (앵커 확정)
 
-> function=`coverage`. origin 사건의 중요도를 측정하는 교차보도 풀. Tier2 설계 시 확정 예정.
+> function=`coverage`. **항목을 생성하지 않고**, origin 사건에 매칭시켜 "몇 곳이 다뤘나(corroboration_count)"로 중요도를 가산한다.
+> 선정 기준: ① 반응형(사건 생성 X, 커버 O) ② echo 밀도 高 ③ 깨끗한 RSS + 타임스탬프.
 
-- 뉴스레터: TLDR · The Batch · Rundown 등
-- 미디어: TechCrunch · Wired · MIT Tech Review 등
-- 컬럼/오피니언: (coverage로 분류 — 새 사건이 아니라 사건 분석)
+### 5-1. MVP 채택 — 미디어 5개 ✅
 
-> 미해결 질문: coverage 풀을 뉴스레터로 좁힐지, 미디어까지 넓힐지 → Tier2 설계의 핵심 병목.
+전부 RSS라 기존 `feedparser` 패턴(OpenAI·NVIDIA·GR) 재사용. 수집 메커니즘 동일.
+
+| 소스 | 피드 | domain | region | 성격 | echo 강점 | 상태 |
+|---|---|---|---|---|---|---|
+| **TechCrunch** | `techcrunch.com/category/artificial-intelligence/feed/` | `media` | `us` | 속보·비즈니스 | 펀딩·런칭 속도, 전문 RSS(페이월 X) | ✅ live (store-only) |
+| **MIT Tech Review** | `technologyreview.com/feed/` | `media` | `us` | 분석·에디토리얼 | 권위 → 사건 중요도 신호 | ⏳ 별도 SDD |
+| **The Verge (AI)** | `theverge.com/rss/ai-artificial-intelligence/index.xml` | `media` | `us` | 소비자·정책 | 고volume, 커버리지 폭 | ⏳ 별도 SDD |
+| **MarkTechPost** | `marktechpost.com/feed/` | `media` | `us` | AI 전문 | **모델 릴리스 요약** = echo 최상 | ⏳ 별도 SDD |
+| **The Decoder** | `the-decoder.com/feed/` | `media` | `eu` | AI 연구·비즈니스 | 깨끗한 피드, 연구 커버 | ⏳ 별도 SDD |
+
+### 5-2. 보류 — 이메일 전용 뉴스레터 ⏸
+
+| 소스 | 이유 |
+|---|---|
+| TLDR AI · The Batch · Rundown · Neuron | **공식 RSS 없음**(이메일 전용) → origin의 죽은 HTML 컬렉터와 같은 벽. MVP 제외 |
+
+### 5-3. 후순위 — Substack 분석형 🔵
+
+| 소스 | 이유 |
+|---|---|
+| Ahead of AI(Raschka) · Last Week in AI · Simon Willison · The Gradient | RSS는 있으나 **주간·분석형이라 echo 밀도 낮음**. 매칭 검증 후 필요 시 추가 |
+
+---
+
+## 6. Tier2 설계 — 진짜 난제는 수집이 아니라 매칭
+
+> §5 소스 수집은 **쉬운 절반**(RSS 재사용). 어려운 절반은 coverage 기사를 origin 사건에 **묶는 것**.
+
+미착수 설계 항목:
+1. **Clusterer + Event 모델** — `Deduplicator→Clusterer` 교체. `Event(대표항목 + corroboration_count + sources[])` 구조. (Mermaid 다이어그램 완료, 코드 미착수)
+2. **매칭 방식** — 임베딩 유사도 기준(제목? 요약 포함?)·threshold·라이브러리 선정
+3. **coverage 1개 PoC** — TechCrunch만 먼저 붙여 매칭 검증 (5개 일괄 투입 전)
+4. **domain 값 확장** — coverage 도입 시 `media`/`newsletter` **신규 domain 값 필요** → 이게 태깅 정책의 나머지 절반(§0 domain 목록에 추가 예정)
+5. **스코어 축 재보정** — corroboration_count가 생기면 22.5% baseline 대비 재보정
+
+> ⚠️ 순서 주의: coverage 소스를 매칭 없이 그냥 붙이면 **origin에 섞인 노이즈**가 된다. Clusterer(6-1)가 먼저.
+
+---
+
+## 7. 참고: 컬럼/오피니언 처리
+
+> 컬럼·오피니언(사건 *분석*)은 새 사건이 아니라 coverage로 분류. 단 §5 MVP 미디어에 대체로 포함되므로(MIT TR·The Decoder 등) 별도 소스 추가는 보류.
