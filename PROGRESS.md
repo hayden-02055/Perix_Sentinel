@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_TechCrunch_Collector_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_MarkTechPost_Collector_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_TechCrunch_Collector_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_MarkTechPost_Collector_SDD.md` / `docs/SDD/Clustering/Perix_Sentinel_Clusterer_Event_SDD.md`
 
 ## 완료된 것
 
@@ -185,15 +185,31 @@
 - **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅, 신규 유틸·신규 엔드포인트 0
 - **Clusterer 입력 데이터 다양성 확보**: coverage 소스가 TechCrunch(속보) + MarkTechPost(모델 릴리스 요약, origin과 내용 밀도 가장 근접) 2개로 늘어 — 다음 SDD(Clusterer + Event 모델)에서 "origin 하나에 여러 echo 매칭" 케이스 실전 검증 가능
 
+### Clusterer + Event 모델 SDD
+- **A0 — 실데이터 관측** ✅ (2026-07-21, 상세는 `docs/notes/clusterer-event-a0-observation.md`)
+  - **ground truth 0쌍 확인 — 구조적 원인.** 기존 DB는 origin 백필(~06-30)과 coverage(07-17~) 시간창이 아예 겹치지 않았음. 사용자 승인 하에 origin `/collect` 라이브 실행(부수효과: Discord에 38건 실제 브리핑 발행)으로 시간대는 겹치게 됐으나, SDD §2.3 게이트를 실제 적용해도 확정 매칭 여전히 0쌍. Org만 겹치는 후보 5쌍을 사람이 직접 검토했으나 전부 실제로는 다른 사건.
+  - 근본 원인: (1) origin 컬렉터 세트가 coverage가 다루는 조직(Alibaba·Moonshot·DeepSeek·Zhipu)을 커버 안 함, (2) 겹치는 조직(OpenAI 등)도 조직명만으로는 오탐 다발 — SDD가 이미 예견한 리스크가 실측으로 재현됨.
+  - 개체 추출 정밀도: 조직 매칭 22/100(양호). 모델 정규식은 10건 중 3건 오탐(`February 2026`, `Scholars 2020`, `AutoScout24`) — SDD가 경고한 오탐 패턴 실측 재현. A2 착수 시 날짜 패턴 가드 필요.
+  - 배포 형태: 단일 Docker 컨테이너 확인 → APScheduler(인프로세스) 결정.
+  - **결정: A2(clusterer.py 로직 + 골든 테스트)는 보류.** 재개 조건은 노트 참조.
+- **A1 — Event 모델/포트/어댑터** ✅ (ground truth와 무관한 순수 구조 작업이라 보류 없이 진행)
+  - `app/domain/models/event.py` — `Event`·`EventMember` (SDD §5.1 그대로)
+  - `app/domain/ports/event_repository.py` — `EventRepositoryPort`
+  - `app/infrastructure/repositories/sqlite_event_repository.py` — `events` 테이블 + 인덱스 2개(§5.2), `event_id` 기준 upsert로 멱등성 확보
+  - `app/main.py` lifespan에 `SqliteEventRepository().init_db()` 추가 (기존 `SqliteItemRepository`와 동일 패턴), 실제 `perix_sentinel.db`에 `events` 테이블 생성 라이브 확인
+  - `tests/test_event_repository.py` 4종(round-trip/멱등성/mark_briefed/미존재 조회) — **66 passed** (기존 62 + 신규 4)
+  - A2(클러스터링 로직·`get_unbriefed_since`·`DailyBriefingUseCase`·엔드포인트·스케줄러)는 미착수
+
 ## 진행 중인 것
 - (없음)
 
 ## 다음 단계
-- Tier2 coverage 소스 2개(TechCrunch·MarkTechPost) 확보 완료. 갈림길:
-  1. **Clusterer + Event 모델 SDD** — 이 세션 MarkTechPost SDD의 명시된 후속 과제. origin↔coverage 매칭 설계 착수
-  2. **타 컬렉터 region 백필 (SDD §8)** — OpenAI·Anthropic·arXiv·HN 등 기존 컬렉터에 `function/domain/region` 상수 태그 추가 (HF와 달리 전부 상수라 간단)
-  3. **나머지 coverage 소스(MIT TR·Verge·Decoder)** — 각각 별도 SDD
-  4. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
+- **Clusterer A2 재개 조건 충족 여부 확인** — origin 컬렉터가 Alibaba/Moonshot 등으로 확장되거나, 기존 origin 소스에서 게이트를 통과하는 사건 쌍이 자연 발생하면 재개 (`docs/notes/clusterer-event-a0-observation.md` 참조)
+- Tier2 coverage 소스 2개(TechCrunch·MarkTechPost) 확보 완료. 그 외 갈림길:
+  1. **타 컬렉터 region 백필 (SDD §8)** — OpenAI·Anthropic·arXiv·HN 등 기존 컬렉터에 `function/domain/region` 상수 태그 추가 (HF와 달리 전부 상수라 간단)
+  2. **나머지 coverage 소스(MIT TR·Verge·Decoder)** — 각각 별도 SDD
+  3. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
+  4. **Origin 컬렉터 확장(Alibaba·Moonshot 등)** — Clusterer ground truth 확보를 위한 선행 작업으로 고려 가능
 
 ## 미결 결정사항
 - **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.
@@ -203,6 +219,8 @@
 - **진행 방식(합의됨)**: 페이즈마다 멈춰서 확인. 그린이어도 자동 다음 페이즈 진행하지 않음.
 - **`baidu` HF region 미포함**: A0에서 `baidu/Unlimited-OCR`이 트렌딩에 등장. `baidu`는 중국 조직이나 SDD `_ORG_REGION` 목록에 없어 현재 `global`. `_ORG_REGION` 확장 시 추가 필요.
 - **타 컬렉터 region 백필 미구현**: OpenAI·Anthropic·arXiv·HN·NVIDIA·GR 등 기존 컬렉터에 `function/domain/region` 상수 태그 없음. SDD §8 다음 작업으로 분리됨.
-- **MarkTechPost boilerplate와 Clusterer 매칭 오염**: `summary` 말미에 모든 항목 공통 상수 문자열(`The post <a href=...>...</a> appeared first on <a href=...>MarkTechPost</a>.`)이 붙는다. Clusterer가 텍스트 유사도로 origin↔coverage를 매칭할 때 (i) MarkTechPost 항목끼리 유사도가 인위적으로 상승, (ii) origin 항목과의 유사도는 상대적으로 희석 — 두 방향 모두 오탐 요인이 될 수 있다. 지금은 정제하지 않고 수집 계약을 고정 유지하되, Clusterer SDD의 A0 관측 항목으로 이월한다.
+- **MarkTechPost boilerplate와 Clusterer 매칭 오염**: `summary` 말미에 모든 항목 공통 상수 문자열(`The post <a href=...>...</a> appeared first on <a href=...>MarkTechPost</a>.`)이 붙는다. **해결됨(설계 차원)**: Clusterer + Event 모델 SDD §2.6이 매칭 입력을 `title`로 한정하기로 결정해 이 문제를 회피한다. `summary`는 브리핑 렌더링에만 쓰인다.
 - **RSS `t["term"]` 직접 접근 가용성 리스크**: OpenAI·NVIDIA·Google Research·TechCrunch·MarkTechPost 5개 컬렉터가 `t["term"]` 직접 접근 동일 패턴. tag object에 `term` 키가 없으면 entry 하나 때문에 `collect()` 전체가 `KeyError`로 중단된다. 스타일 부채가 아니라 **가용성 리스크**로 격상해 기록. 공통 정리 라운드에서 `t.get("term")` 방어적 helper로 통합 검토.
 - **Coverage 피드 페이지 크기 제약(MTP 10건/TC 20건) → 수집 주기 대비 유실 가능. Clusterer 설계 시 cadence 결정 필요**
+- **Clusterer ground truth 부재 (신규, 2026-07-21)**: origin 컬렉터 세트가 coverage가 다루는 조직(Alibaba·Moonshot·DeepSeek·Zhipu)을 커버하지 않아, 실데이터로 A2(클러스터링 로직) 골든 테스트를 만들 수 없다. `docs/notes/clusterer-event-a0-observation.md`의 재개 조건 충족 전까지 A2 착수 보류.
+- **모델 추출 정규식 오탐 (신규, 2026-07-21)**: `_MODEL_RE`가 `"February 2026"`, `"Scholars 2020"` 같은 날짜류 문자열을 모델명으로 오탐. A2 착수 시 가드 로직(날짜 패턴 제외 등) 필요.
