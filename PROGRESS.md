@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_TechCrunch_Collector_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_MarkTechPost_Collector_SDD.md`
 
 ## 완료된 것
 
@@ -167,14 +167,33 @@
 - **HF region=global 기본값**: 알 수 없는 조직은 `global` — HF 전역 허브 성격 반영 (의도된 설계)
 - **타 컬렉터 region 백필은 별건**: OpenAI(`us`)·arXiv(`global`) 등 기존 컬렉터 `function/domain/region` 소급은 다음 작업으로 분리
 
+### MarkTechPost Collector SDD (Tier2 coverage, 두 번째 소스)
+- **A0 — 피드 덤프 & 필드 확정** ✅ (2026-07-21)
+  - `https://www.marktechpost.com/feed/` RSS 2.0, bozo=False
+  - 10건 전부 AI 관련 카테고리 보유(비-AI 0%, SDD 예상대로 <15% 임계값 이하) → **카테고리 필터 불필요**
+  - `published_parsed` 정상 채워짐(UTC)
+  - `summary`에 `<img>` 등 HTML 혼입 **없음**(Google Research 때와 달리 정제 불필요) — WordPress boilerplate("The post ... appeared first on MarkTechPost.")만 포함, 원문 그대로 유지
+  - SDD §6 가정과 실측 100% 일치 → §6·§7 갱신 불필요
+- **A1~A3 — `MarkTechPostRssCollector` 구현 + 배선** ✅
+  - `app/infrastructure/collectors/marktechpost_rss_collector.py` — `TechCrunchRssCollector` 복사 기반, `RSS_URL`/`source="MarkTechPost"`/`metadata.feed="marktechpost-ai"` 교체
+  - `app/interface/api/collect.py`의 `/collect/coverage` 딕셔너리에 `"marktechpost"` 한 줄 추가 (신규 엔드포인트·신규 러너 없음)
+- **A4 — 골든 fixture + 실가동** ✅
+  - `tests/fixtures/marktechpost_feed.xml`(A0 실제 덤프 3건 트림, 카테고리 포함) + `marktechpost_feed.golden.json`
+  - `tests/test_marktechpost_collector_golden.py`: golden match + 브리핑 0건 배선 테스트 2개
+  - **62 passed** (전체 회귀 포함, 기존 60 + 신규 2)
+  - `/collect/coverage` 실가동: TechCrunch 20건 + MarkTechPost 10건 모두 DB 적재, **briefed=0** 확인
+- **비범위 준수**: `scoring_policies.py`, `scoring_engine.py` 무변경 확인 ✅, 신규 유틸·신규 엔드포인트 0
+- **Clusterer 입력 데이터 다양성 확보**: coverage 소스가 TechCrunch(속보) + MarkTechPost(모델 릴리스 요약, origin과 내용 밀도 가장 근접) 2개로 늘어 — 다음 SDD(Clusterer + Event 모델)에서 "origin 하나에 여러 echo 매칭" 케이스 실전 검증 가능
+
 ## 진행 중인 것
 - (없음)
 
 ## 다음 단계
-- Tier1 origin 라인업 + HF region 태깅 완료. 갈림길:
-  1. **타 컬렉터 region 백필 (SDD §8)** — OpenAI·Anthropic·arXiv·HN 등 기존 컬렉터에 `function/domain/region` 상수 태그 추가 (HF와 달리 전부 상수라 간단)
-  2. **Tier2(뉴스레터·미디어) 수집** — 비교군 데이터, 스코어링 재설계 재료 확보
-  3. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
+- Tier2 coverage 소스 2개(TechCrunch·MarkTechPost) 확보 완료. 갈림길:
+  1. **Clusterer + Event 모델 SDD** — 이 세션 MarkTechPost SDD의 명시된 후속 과제. origin↔coverage 매칭 설계 착수
+  2. **타 컬렉터 region 백필 (SDD §8)** — OpenAI·Anthropic·arXiv·HN 등 기존 컬렉터에 `function/domain/region` 상수 태그 추가 (HF와 달리 전부 상수라 간단)
+  3. **나머지 coverage 소스(MIT TR·Verge·Decoder)** — 각각 별도 SDD
+  4. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
 
 ## 미결 결정사항
 - **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.

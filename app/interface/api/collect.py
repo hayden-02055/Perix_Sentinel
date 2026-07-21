@@ -8,6 +8,7 @@ from app.infrastructure.collectors.github_trending_collector import GitHubTrendi
 from app.infrastructure.collectors.google_research_rss_collector import GoogleResearchRssCollector
 from app.infrastructure.collectors.hackernews_api_collector import HackerNewsApiCollector
 from app.infrastructure.collectors.huggingface_api_collector import HuggingFaceApiCollector
+from app.infrastructure.collectors.marktechpost_rss_collector import MarkTechPostRssCollector
 from app.infrastructure.collectors.meta_html_collector import MetaHtmlCollector
 from app.infrastructure.collectors.mistral_html_collector import MistralHtmlCollector
 from app.infrastructure.collectors.nvidia_rss_collector import NvidiaRssCollector
@@ -54,5 +55,6 @@ async def trigger_collect() -> dict:
 async def trigger_collect_coverage() -> dict:
     collectors = {
         "techcrunch": TechCrunchRssCollector(),
+        "marktechpost": MarkTechPostRssCollector(),
     }
     return await _run(collectors, SqliteItemRepository(), publisher=None)

@@ -1,0 +1,81 @@
+[
+  {
+    "source": "MarkTechPost",
+    "title": "Validating Distributed LLM Serving Benchmarks with NVIDIA srt-slurm, SLURM Recipes, Parameter Sweeps, and Pareto Analysis",
+    "url": "https://www.marktechpost.com/2026/07/21/validating-distributed-llm-serving-benchmarks-with-nvidia-srt-slurm-slurm-recipes-parameter-sweeps-and-pareto-analysis/",
+    "published_at": "2026-07-21T16:29:36Z",
+    "summary": "In this tutorial, we explore NVIDIA's srt-slurm framework and learn how we use srtctl to convert declarative YAML configurations into reproducible SLURM benchmark workflows for distributed LLM serving. We set up the project in Google Colab, inspect its internal architecture, define a cluster configuration, dry-run built-in and custom recipes, and model a disaggregated prefill-and-decode deployment […]\nThe post <a href=\"https://www.marktechpost.com/2026/07/21/validating-distributed-llm-serving-benchmarks-with-nvidia-srt-slurm-slurm-recipes-parameter-sweeps-and-pareto-analysis/\">Validating Distributed LLM Serving Benchmarks with NVIDIA srt-slurm, SLURM Recipes, Parameter Sweeps, and Pareto Analysis</a> appeared first on <a href=\"https://www.marktechpost.com\">MarkTechPost</a>.",
+    "tags": [
+      "marktechpost",
+      "ai infrastructure",
+      "artificial intelligence",
+      "editors pick",
+      "staff",
+      "technology",
+      "tutorials"
+    ],
+    "metadata": {
+      "function": "coverage",
+      "domain": "media",
+      "region": "us",
+      "feed": "marktechpost-ai"
+    }
+  },
+  {
+    "source": "MarkTechPost",
+    "title": "Meta Open-Sources Astryx: An Agent-Ready React Design System With 150+ Accessible Components, Seven Themes, and a CLI",
+    "url": "https://www.marktechpost.com/2026/07/21/meta-open-sources-astryx-an-agent-ready-react-design-system-with-150-accessible-components-seven-themes-and-a-cli/",
+    "published_at": "2026-07-21T08:49:55Z",
+    "summary": "Meta has open-sourced Astryx, the React and StyleX design system it ran internally for eight years across 13,000+ apps. It ships 150+ accessible components, seven themes, dark mode, templates, and an agent-ready CLI under MIT — with React 19+ required.\nThe post <a href=\"https://www.marktechpost.com/2026/07/21/meta-open-sources-astryx-an-agent-ready-react-design-system-with-150-accessible-components-seven-themes-and-a-cli/\">Meta Open-Sources Astryx: An Agent-Ready React Design System With 150+ Accessible Components, Seven Themes, and a CLI</a> appeared first on <a href=\"https://www.marktechpost.com\">MarkTechPost</a>.",
+    "tags": [
+      "marktechpost",
+      "agentic ai",
+      "ai agents",
+      "ai shorts",
+      "artificial intelligence",
+      "editors pick",
+      "new releases",
+      "open source",
+      "software engineering",
+      "staff",
+      "tech news",
+      "technology"
+    ],
+    "metadata": {
+      "function": "coverage",
+      "domain": "media",
+      "region": "us",
+      "feed": "marktechpost-ai"
+    }
+  },
+  {
+    "source": "MarkTechPost",
+    "title": "NVIDIA Releases Cosmos 3 Edge: A 4B-Parameter Open World Model That Reasons and Generates Robot Actions On-Device",
+    "url": "https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/",
+    "published_at": "2026-07-21T07:48:28Z",
+    "summary": "NVIDIA has released Cosmos 3 Edge, a 4-billion-parameter open world model built to run on-device. It helps robots and vision AI agents understand surroundings, reason in real time, and generate robot actions locally. The Cosmos 3 family included Cosmos 3 Nano (16B) and Cosmos 3 Super (64B) shipped on May 31, 2026 at GTC Taipei. […]\nThe post <a href=\"https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/\">NVIDIA Releases Cosmos 3 Edge: A 4B-Parameter Open World Model That Reasons and Generates Robot Actions On-Device</a> appeared first on <a href=\"https://www.marktechpost.com\">MarkTechPost</a>.",
+    "tags": [
+      "marktechpost",
+      "ai infrastructure",
+      "ai shorts",
+      "applications",
+      "artificial intelligence",
+      "editors pick",
+      "language model",
+      "large language model",
+      "new releases",
+      "physical ai",
+      "robotics",
+      "staff",
+      "tech news",
+      "technology",
+      "world model"
+    ],
+    "metadata": {
+      "function": "coverage",
+      "domain": "media",
+      "region": "us",
+      "feed": "marktechpost-ai"
+    }
+  }
+]
