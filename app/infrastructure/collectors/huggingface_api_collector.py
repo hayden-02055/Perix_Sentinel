@@ -1,11 +1,8 @@
-import asyncio
-from datetime import datetime
-
-import requests
-
+from app.core.datetime_utils import parse_date
 from app.core.logger import get_logger
 from app.domain.models.collected_item import CollectedItem
 from app.domain.ports.collector import CollectorPort
+from app.infrastructure.http.async_client import fetch_json
 
 logger = get_logger(__name__)
 
@@ -32,6 +29,64 @@ _PIPELINE_TAG_MAP: dict[str, str] = {
     "text-to-speech": "audio",
 }
 
+# Organisation handle → region (exact match, compared lowercase).
+# Maintenance target: add new org handles here as new labs emerge.
+_ORG_REGION: dict[str, str] = {
+    # ── China ──
+    "deepseek-ai": "cn",
+    "qwen": "cn",           # Alibaba
+    "zai-org": "cn",        # Z.ai / Zhipu
+    "thudm": "cn",          # GLM (Tsinghua)
+    "zhipuai": "cn",
+    "moonshotai": "cn",     # Kimi
+    "01-ai": "cn",          # Yi
+    "baichuan-inc": "cn",
+    "internlm": "cn",
+    "tencent": "cn",        # Hunyuan
+    "bytedance-seed": "cn",
+    "minimaxai": "cn",
+    "stepfun-ai": "cn",
+    "openbmb": "cn",        # MiniCPM
+    "xiaomimimo": "cn",
+    # ── US ── (accuracy anchors)
+    "meta-llama": "us",
+    "google": "us",
+    "microsoft": "us",
+    "openai": "us",
+    "nvidia": "us",
+    # ── EU ──
+    "mistralai": "eu",
+}
+
+# Model-family substring → region (re-upload rescue, 2nd signal).
+# Checked only when org handle lookup misses.
+_FAMILY_REGION: list[tuple[str, str]] = [
+    ("deepseek", "cn"),
+    ("qwen", "cn"),
+    ("glm", "cn"),
+    ("kimi", "cn"),
+    ("yi-", "cn"),
+    ("baichuan", "cn"),
+    ("internlm", "cn"),
+    ("minicpm", "cn"),
+    ("llama", "us"),
+    ("gemma", "us"),
+    ("phi", "us"),
+    ("mistral", "eu"),
+    ("mixtral", "eu"),
+]
+
+
+def _derive_region(author: str, model_id: str) -> str:
+    a = author.lower().strip()
+    if a in _ORG_REGION:
+        return _ORG_REGION[a]
+    mid = model_id.lower()
+    for needle, region in _FAMILY_REGION:
+        if needle in mid:
+            return region
+    return "global"
+
 
 def _build_tags(model_id: str, pipeline_tag: str | None, raw_tags: list[str]) -> list[str]:
     tags = ["huggingface"]
@@ -54,31 +109,18 @@ def _build_tags(model_id: str, pipeline_tag: str | None, raw_tags: list[str]) ->
     return tags
 
 
-def _parse_updated_at(model: dict) -> datetime:
-    raw = model.get("lastModified") or model.get("updatedAt") or model.get("createdAt")
-    if raw:
-        try:
-            return datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
-        except ValueError:
-            pass
-    return datetime.utcnow()
-
-
-def _fetch_trending() -> list[dict]:
-    response = requests.get(HF_TRENDING_URL, timeout=15)
-    response.raise_for_status()
-    payload = response.json()
-    # API returns {"recentlyTrending": [{repoData: {...}}, ...]}
-    if isinstance(payload, dict):
-        return payload.get("recentlyTrending", [])
-    return payload
+def _parse_updated_at(model: dict):
+    raw = model.get("lastModified") or model.get("updatedAt") or model.get("createdAt") or ""
+    return parse_date(raw)
 
 
 class HuggingFaceApiCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
         logger.info("Collecting from HuggingFace Trending API: %s", HF_TRENDING_URL)
 
-        data = await asyncio.to_thread(_fetch_trending)
+        payload = await fetch_json(HF_TRENDING_URL)
+        # API returns {"recentlyTrending": [{repoData: {...}}, ...]}
+        data: list[dict] = payload.get("recentlyTrending", []) if isinstance(payload, dict) else payload
 
         items: list[CollectedItem] = []
         for entry in data:
@@ -110,6 +152,9 @@ class HuggingFaceApiCollector(CollectorPort):
                         "downloads": downloads,
                         "pipeline_tag": pipeline_tag or "",
                         "author": author,
+                        "function": "origin",
+                        "domain": "ecosystem",
+                        "region": _derive_region(author, model_id),
                     },
                 )
             )

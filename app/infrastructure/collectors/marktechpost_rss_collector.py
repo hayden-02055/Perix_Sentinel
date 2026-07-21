@@ -9,12 +9,13 @@ from app.domain.ports.collector import CollectorPort
 
 logger = get_logger(__name__)
 
-RSS_URL = "https://openai.com/news/rss.xml"
+RSS_URL = "https://www.marktechpost.com/feed/"
+MAX_ITEMS = 50
 
 
-class OpenAIRssCollector(CollectorPort):
+class MarkTechPostRssCollector(CollectorPort):
     async def collect(self) -> list[CollectedItem]:
-        logger.info("Collecting from OpenAI RSS: %s", RSS_URL)
+        logger.info("Collecting from MarkTechPost RSS: %s", RSS_URL)
 
         feed = await asyncio.to_thread(feedparser.parse, RSS_URL)
 
@@ -22,24 +23,33 @@ class OpenAIRssCollector(CollectorPort):
             logger.warning("Feed parse warning: %s", feed.bozo_exception)
 
         items: list[CollectedItem] = []
-        for entry in feed.entries:
+        for entry in feed.entries[:MAX_ITEMS]:
             published_at = (
                 parse_struct_time(entry.published_parsed)
                 if getattr(entry, "published_parsed", None)
                 else now_utc()
             )
+
+            raw_tags = entry.get("tags", [])
+            categories = [t["term"].lower() for t in raw_tags]
+            tags = ["marktechpost"] + categories
+
             items.append(
                 CollectedItem(
-                    source="OpenAI",
+                    source="MarkTechPost",
                     title=entry.get("title", "").strip(),
                     url=entry.get("link", "").strip(),
                     published_at=published_at,
                     summary=entry.get("summary", "").strip(),
-                    tags=["openai"],
+                    tags=tags,
+                    metadata={
+                        "function": "coverage",
+                        "domain": "media",
+                        "region": "us",
+                        "feed": "marktechpost-ai",
+                    },
                 )
             )
 
-        logger.info("Collected %d items from OpenAI RSS", len(items))
+        logger.info("Collected %d items from MarkTechPost RSS", len(items))
         return items
-
-

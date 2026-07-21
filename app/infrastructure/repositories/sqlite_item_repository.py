@@ -1,7 +1,8 @@
 import json
-from datetime import datetime
 
 import aiosqlite
+
+from app.core.datetime_utils import now_utc
 
 from app.core.config import settings
 from app.core.logger import get_logger
@@ -159,6 +160,6 @@ class SqliteItemRepository(ItemRepositoryPort):
         async with aiosqlite.connect(_db_path()) as db:
             await db.execute(
                 "UPDATE collected_items SET is_briefed = 1, briefed_at = ? WHERE id = ?",
-                (datetime.utcnow().isoformat(), item_id),
+                (now_utc().isoformat(), item_id),
             )
             await db.commit()

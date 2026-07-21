@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.core.datetime_utils import now_utc
 from app.domain.models.collected_item import CollectedItem
 from app.domain.services.scoring_policies import (
     KEYWORD_WEIGHTS,
@@ -68,8 +69,13 @@ def _popularity_score(item: CollectedItem) -> int:
 
 def _recency_score(item: CollectedItem, now: datetime) -> int:
     published = item.published_at
-    if published.tzinfo is not None:
+    # Normalise so both operands share the same tz-awareness before subtraction.
+    # Tests inject naive `now` + naive `published_at`; production uses aware UTC.
+    if now.tzinfo is None and published.tzinfo is not None:
         published = published.replace(tzinfo=None)
+    elif now.tzinfo is not None and published.tzinfo is None:
+        from datetime import timezone
+        published = published.replace(tzinfo=timezone.utc)
     age_days = (now - published).total_seconds() / 86400
     if age_days <= 1:
         return 5
@@ -81,7 +87,7 @@ def _recency_score(item: CollectedItem, now: datetime) -> int:
 
 
 def calculate_score(item: CollectedItem, *, now: datetime | None = None) -> ScoreBreakdown:
-    now = now or datetime.utcnow()
+    now = now or now_utc()
     keyword_total, matched = _keyword_score(item)
     return ScoreBreakdown(
         source_score=_source_score(item),

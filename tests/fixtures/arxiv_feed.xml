@@ -1,0 +1,130 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/UsSkgm4fEeLOZVYGFLYmrXBwyNE</id>
+  <title>arXiv Query: search_query=cat:cs.AI OR cat:cs.CL OR cat:cs.LG&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-06-30T19:32:04Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=cat:cs.AI+OR+(cat:cs.CL+OR+cat:cs.LG)&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>441496</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2606.30645v1</id>
+    <title>VLK: Learning Humanoid Loco-Manipulation from Synthetic Interactions in Reconstructed Scenes</title>
+    <updated>2026-06-29T17:59:55Z</updated>
+    <link href="https://arxiv.org/abs/2606.30645v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.30645v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Perception-based humanoid loco-manipulation requires connecting egocentric observations and task instructions to whole-body motion. Learning this mapping requires synchronized egocentric images, language commands, and robot-compatible kinematic trajectories, yet no existing data source provides this complete tuple at scale. We address this bottleneck by generating vision-language-kinematics (VLK) supervision synthetically in reconstructed scenes. Our pipeline leverages 3D Gaussian Splatting to reconstruct metric-scale indoor environments, synthesizes navigation and object-interaction trajectories using privileged scene information, and renders paired egocentric observations after the fact. We produce 48,000 paired trajectories with no human intervention and train a VLK policy that predicts short-horizon whole-body kinematic trajectories. A whole-body tracker converts these predictions into actions on the physical humanoid. We evaluate on the physical Unitree G1 performing navigation and single-object transport, demonstrating that synthesized interactions in reconstructed scenes provide effective supervision for sim-to-real perception-based humanoid loco-manipulation. Project Website: https://vision-language-kinematics.github.io/</summary>
+    <category term="cs.RO" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.GR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-29T17:59:55Z</published>
+    <arxiv:comment>19 pages, 7 figures, 4 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.RO"/>
+    <author>
+      <name>Yen-Jen Wang</name>
+    </author>
+    <author>
+      <name>Jiaman Li</name>
+    </author>
+    <author>
+      <name>Sirui Chen</name>
+    </author>
+    <author>
+      <name>Takara E. Truong</name>
+    </author>
+    <author>
+      <name>Pei Xu</name>
+    </author>
+    <author>
+      <name>Pieter Abbeel</name>
+    </author>
+    <author>
+      <name>Rocky Duan</name>
+    </author>
+    <author>
+      <name>Koushil Sreenath</name>
+    </author>
+    <author>
+      <name>Angjoo Kanazawa</name>
+    </author>
+    <author>
+      <name>Carmelo Sferrazza</name>
+    </author>
+    <author>
+      <name>Guanya Shi</name>
+    </author>
+    <author>
+      <name>Karen Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.30642v1</id>
+    <title>LeVo 2: Stable and Melodious Song Generation via Hierarchical Representation Modeling and Progressive Post-Training</title>
+    <updated>2026-06-29T17:59:20Z</updated>
+    <link href="https://arxiv.org/abs/2606.30642v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.30642v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Full-length song generation must preserve coherence and musicality, render detailed vocal and accompaniment acoustics, and follow lyrics and prompts. Existing language model-based systems face a structural trade-off: mixed-token modeling preserves vocal-instrument coordination but obscures track-specific details, whereas dual-track prediction improves acoustics but requires longer sequences and weakens global planning. We present LeVo 2, a hybrid LLM-Diffusion framework for controllable full-length song generation. LeVo 2 formulates this trade-off as hierarchical modeling: LeLM first predicts mixed tokens for semantic planning, then predicts vocal and accompaniment tokens in parallel for track-specific refinement, while a diffusion-based Music Codec reconstructs full-length waveforms. A central contribution of this extended version is an aesthetics-guided training schedule for alignment. During pre-training, an automated music aesthetic evaluation framework assigns musicality-tier conditions to large-scale data, providing musicality priors before preference alignment. Progressive post-training applies SFT, large-scale offline DPO, and closed-loop semi-online DPO to separately improve generation quality, controllability, and musicality. Modular extension then trains the Track-Specific LM for acoustic refinement while preserving the aligned semantic planner. This schedule separates musicality learning, controllability alignment, and acoustic refinement, mitigating optimization conflict and the limitations of static offline preference pairs. Expert listening tests and objective evaluations show that LeVo 2 outperforms open-source baselines across six subjective dimensions, and approaches leading commercial systems on several listening metrics. Ablations validate the effects of the training strategy, aesthetics guidance, scaling, and hierarchical architecture.</summary>
+    <category term="cs.SD" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-29T17:59:20Z</published>
+    <arxiv:primary_category term="cs.SD"/>
+    <author>
+      <name>Shun Lei</name>
+    </author>
+    <author>
+      <name>Huaicheng Zhang</name>
+    </author>
+    <author>
+      <name>Dapeng Wu</name>
+    </author>
+    <author>
+      <name>Yaoxun Xu</name>
+    </author>
+    <author>
+      <name>Lishi Zuo</name>
+    </author>
+    <author>
+      <name>Wei Tan</name>
+    </author>
+    <author>
+      <name>Hangting Chen</name>
+    </author>
+    <author>
+      <name>Guangzheng Li</name>
+    </author>
+    <author>
+      <name>Jianwei Yu</name>
+    </author>
+    <author>
+      <name>Zhiyong Wu</name>
+    </author>
+    <author>
+      <name>Dong Yu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.30639v1</id>
+    <title>Self-Evolving World Models for LLM Agent Planning</title>
+    <updated>2026-06-29T17:58:43Z</updated>
+    <link href="https://arxiv.org/abs/2606.30639v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.30639v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>World models offer a principled way to equip long-horizon LLM agents with foresight: predictions of action consequences before execution. However, unreliable foresight can be ignored, misused, or even degrade downstream decision-making. In this paper, we introduce WorldEvolver, a self-evolving world model framework that revises its deployment-time context while keeping the downstream agent and all model parameters frozen. WorldEvolver integrates three modules: (i) Episodic Memory, which exploits real action transitions through retrieval-based simulation; (ii) Semantic Memory, which extracts persistent heuristic rules from prediction-observation mismatches; and (iii) Selective Foresight, which filters low-confidence predictions before integrating them into agent reasoning context. We evaluate WorldEvolver on ALFWorld and ScienceWorld, measuring world model prediction accuracy on Word2World and downstream agent success rate on AgentBoard. Extensive experiments show that WorldEvolver achieves the highest prediction accuracy across three backbones and leads other world model baselines on downstream agent success rate, demonstrating that test-time memory revision enhances both predictive fidelity and planning performance.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-29T17:58:43Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Xuan Zhang</name>
+    </author>
+    <author>
+      <name>Wenxuan Zhang</name>
+    </author>
+    <author>
+      <name>See-Kiong Ng</name>
+    </author>
+    <author>
+      <name>Yang Deng</name>
+    </author>
+  </entry>
+</feed>

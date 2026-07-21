@@ -1,0 +1,44 @@
+[
+  {
+    "source": "TechCrunch",
+    "title": "OpenAI Releases New Reasoning Model GPT-5",
+    "url": "https://techcrunch.com/2026/06/30/openai-gpt5-reasoning-model/",
+    "published_at": "2026-06-30T10:00:00Z",
+    "summary": "OpenAI has released GPT-5, its latest reasoning model with significant improvements in complex problem solving and agent workflows.",
+    "tags": ["techcrunch"],
+    "metadata": {
+      "function": "coverage",
+      "domain": "media",
+      "region": "us",
+      "feed": "techcrunch-ai"
+    }
+  },
+  {
+    "source": "TechCrunch",
+    "title": "Anthropic Launches Claude 5 With Improved Agent Capabilities",
+    "url": "https://techcrunch.com/2026/06/29/anthropic-claude5-agent/",
+    "published_at": "2026-06-29T15:30:00Z",
+    "summary": "Anthropic has launched Claude 5, featuring enhanced agent capabilities and improved performance on coding and analysis tasks.",
+    "tags": ["techcrunch"],
+    "metadata": {
+      "function": "coverage",
+      "domain": "media",
+      "region": "us",
+      "feed": "techcrunch-ai"
+    }
+  },
+  {
+    "source": "TechCrunch",
+    "title": "Google DeepMind Unveils Gemini Ultra 2 Benchmark Results",
+    "url": "https://techcrunch.com/2026/06/28/deepmind-gemini-ultra-2/",
+    "published_at": "2026-06-28T09:00:00Z",
+    "summary": "Google DeepMind has shared benchmark results for Gemini Ultra 2, demonstrating state-of-the-art performance across multiple AI evaluation suites.",
+    "tags": ["techcrunch"],
+    "metadata": {
+      "function": "coverage",
+      "domain": "media",
+      "region": "us",
+      "feed": "techcrunch-ai"
+    }
+  }
+]

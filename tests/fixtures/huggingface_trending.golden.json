@@ -1,0 +1,91 @@
+[
+  {
+    "source": "HuggingFace",
+    "title": "deepseek-ai/DeepSeek-V4",
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4",
+    "published_at": "2026-06-25T10:00:00+00:00",
+    "summary": "Trending HuggingFace model by deepseek-ai",
+    "tags": [
+      "huggingface",
+      "text-generation",
+      "llm",
+      "transformers"
+    ],
+    "metadata": {
+      "likes": 1200,
+      "downloads": 5000,
+      "pipeline_tag": "text-generation",
+      "author": "deepseek-ai",
+      "function": "origin",
+      "domain": "ecosystem",
+      "region": "cn"
+    }
+  },
+  {
+    "source": "HuggingFace",
+    "title": "bartowski/Qwen2.5-GGUF",
+    "url": "https://huggingface.co/bartowski/Qwen2.5-GGUF",
+    "published_at": "2026-06-24T08:00:00+00:00",
+    "summary": "Trending HuggingFace model by bartowski",
+    "tags": [
+      "huggingface",
+      "text-generation",
+      "llm",
+      "qwen",
+      "gguf"
+    ],
+    "metadata": {
+      "likes": 300,
+      "downloads": 10000,
+      "pipeline_tag": "text-generation",
+      "author": "bartowski",
+      "function": "origin",
+      "domain": "ecosystem",
+      "region": "cn"
+    }
+  },
+  {
+    "source": "HuggingFace",
+    "title": "meta-llama/Llama-4",
+    "url": "https://huggingface.co/meta-llama/Llama-4",
+    "published_at": "2026-06-23T12:00:00+00:00",
+    "summary": "Trending HuggingFace model by meta-llama",
+    "tags": [
+      "huggingface",
+      "text-generation",
+      "llm",
+      "llama",
+      "transformers"
+    ],
+    "metadata": {
+      "likes": 800,
+      "downloads": 15000,
+      "pipeline_tag": "text-generation",
+      "author": "meta-llama",
+      "function": "origin",
+      "domain": "ecosystem",
+      "region": "us"
+    }
+  },
+  {
+    "source": "HuggingFace",
+    "title": "randomuser/some-model",
+    "url": "https://huggingface.co/randomuser/some-model",
+    "published_at": "2026-06-20T09:00:00+00:00",
+    "summary": "Trending HuggingFace model by randomuser",
+    "tags": [
+      "huggingface",
+      "text-generation",
+      "llm"
+    ],
+    "metadata": {
+      "likes": 10,
+      "downloads": 100,
+      "pipeline_tag": "text-generation",
+      "author": "randomuser",
+      "function": "origin",
+      "domain": "ecosystem",
+      "region": "global"
+    }
+  }
+]

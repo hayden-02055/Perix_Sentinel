@@ -1,0 +1,11 @@
+{
+  "id": 102,
+  "type": "story",
+  "by": "bob",
+  "time": 1782838740,
+  "title": "Ask HN: Best way to fine-tune an LLM on a budget?",
+  "text": "I want to fine-tune a small LLM for my hobby project, any tips?",
+  "score": 30,
+  "descendants": 12,
+  "kids": [203]
+}

@@ -1,0 +1,11 @@
+{
+  "id": 101,
+  "type": "story",
+  "by": "alice",
+  "time": 1782842392,
+  "title": "Claude Sonnet 5 Released",
+  "url": "https://www.anthropic.com/news/claude-sonnet-5",
+  "score": 450,
+  "descendants": 120,
+  "kids": [201, 202]
+}

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>MarkTechPost</title>
+    <link>https://www.marktechpost.com</link>
+    <description>MarkTechPost - AI/ML news, tutorials, and research summaries</description>
+    <item>
+      <title>Validating Distributed LLM Serving Benchmarks with NVIDIA srt-slurm, SLURM Recipes, Parameter Sweeps, and Pareto Analysis</title>
+      <link>https://www.marktechpost.com/2026/07/21/validating-distributed-llm-serving-benchmarks-with-nvidia-srt-slurm-slurm-recipes-parameter-sweeps-and-pareto-analysis/</link>
+      <pubDate>Tue, 21 Jul 2026 16:29:36 +0000</pubDate>
+      <category>AI Infrastructure</category>
+      <category>Artificial Intelligence</category>
+      <category>Editors Pick</category>
+      <category>Staff</category>
+      <category>Technology</category>
+      <category>Tutorials</category>
+      <description>In this tutorial, we explore NVIDIA's srt-slurm framework and learn how we use srtctl to convert declarative YAML configurations into reproducible SLURM benchmark workflows for distributed LLM serving. We set up the project in Google Colab, inspect its internal architecture, define a cluster configuration, dry-run built-in and custom recipes, and model a disaggregated prefill-and-decode deployment [&#8230;]
+The post &lt;a href="https://www.marktechpost.com/2026/07/21/validating-distributed-llm-serving-benchmarks-with-nvidia-srt-slurm-slurm-recipes-parameter-sweeps-and-pareto-analysis/"&gt;Validating Distributed LLM Serving Benchmarks with NVIDIA srt-slurm, SLURM Recipes, Parameter Sweeps, and Pareto Analysis&lt;/a&gt; appeared first on &lt;a href="https://www.marktechpost.com"&gt;MarkTechPost&lt;/a&gt;.</description>
+    </item>
+    <item>
+      <title>Meta Open-Sources Astryx: An Agent-Ready React Design System With 150+ Accessible Components, Seven Themes, and a CLI</title>
+      <link>https://www.marktechpost.com/2026/07/21/meta-open-sources-astryx-an-agent-ready-react-design-system-with-150-accessible-components-seven-themes-and-a-cli/</link>
+      <pubDate>Tue, 21 Jul 2026 08:49:55 +0000</pubDate>
+      <category>Agentic AI</category>
+      <category>AI Agents</category>
+      <category>AI Shorts</category>
+      <category>Artificial Intelligence</category>
+      <category>Editors Pick</category>
+      <category>New Releases</category>
+      <category>Open Source</category>
+      <category>Software Engineering</category>
+      <category>Staff</category>
+      <category>Tech News</category>
+      <category>Technology</category>
+      <description>Meta has open-sourced Astryx, the React and StyleX design system it ran internally for eight years across 13,000+ apps. It ships 150+ accessible components, seven themes, dark mode, templates, and an agent-ready CLI under MIT — with React 19+ required.
+The post &lt;a href="https://www.marktechpost.com/2026/07/21/meta-open-sources-astryx-an-agent-ready-react-design-system-with-150-accessible-components-seven-themes-and-a-cli/"&gt;Meta Open-Sources Astryx: An Agent-Ready React Design System With 150+ Accessible Components, Seven Themes, and a CLI&lt;/a&gt; appeared first on &lt;a href="https://www.marktechpost.com"&gt;MarkTechPost&lt;/a&gt;.</description>
+    </item>
+    <item>
+      <title>NVIDIA Releases Cosmos 3 Edge: A 4B-Parameter Open World Model That Reasons and Generates Robot Actions On-Device</title>
+      <link>https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/</link>
+      <pubDate>Tue, 21 Jul 2026 07:48:28 +0000</pubDate>
+      <category>AI Infrastructure</category>
+      <category>AI Shorts</category>
+      <category>Applications</category>
+      <category>Artificial Intelligence</category>
+      <category>Editors Pick</category>
+      <category>Language Model</category>
+      <category>Large Language Model</category>
+      <category>New Releases</category>
+      <category>Physical AI</category>
+      <category>Robotics</category>
+      <category>Staff</category>
+      <category>Tech News</category>
+      <category>Technology</category>
+      <category>World Model</category>
+      <description>NVIDIA has released Cosmos 3 Edge, a 4-billion-parameter open world model built to run on-device. It helps robots and vision AI agents understand surroundings, reason in real time, and generate robot actions locally. The Cosmos 3 family included Cosmos 3 Nano (16B) and Cosmos 3 Super (64B) shipped on May 31, 2026 at GTC Taipei. [&#8230;]
+The post &lt;a href="https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/"&gt;NVIDIA Releases Cosmos 3 Edge: A 4B-Parameter Open World Model That Reasons and Generates Robot Actions On-Device&lt;/a&gt; appeared first on &lt;a href="https://www.marktechpost.com"&gt;MarkTechPost&lt;/a&gt;.</description>
+    </item>
+  </channel>
+</rss>
