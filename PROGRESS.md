@@ -205,3 +205,4 @@
 - **타 컬렉터 region 백필 미구현**: OpenAI·Anthropic·arXiv·HN·NVIDIA·GR 등 기존 컬렉터에 `function/domain/region` 상수 태그 없음. SDD §8 다음 작업으로 분리됨.
 - **MarkTechPost boilerplate와 Clusterer 매칭 오염**: `summary` 말미에 모든 항목 공통 상수 문자열(`The post <a href=...>...</a> appeared first on <a href=...>MarkTechPost</a>.`)이 붙는다. Clusterer가 텍스트 유사도로 origin↔coverage를 매칭할 때 (i) MarkTechPost 항목끼리 유사도가 인위적으로 상승, (ii) origin 항목과의 유사도는 상대적으로 희석 — 두 방향 모두 오탐 요인이 될 수 있다. 지금은 정제하지 않고 수집 계약을 고정 유지하되, Clusterer SDD의 A0 관측 항목으로 이월한다.
 - **RSS `t["term"]` 직접 접근 가용성 리스크**: OpenAI·NVIDIA·Google Research·TechCrunch·MarkTechPost 5개 컬렉터가 `t["term"]` 직접 접근 동일 패턴. tag object에 `term` 키가 없으면 entry 하나 때문에 `collect()` 전체가 `KeyError`로 중단된다. 스타일 부채가 아니라 **가용성 리스크**로 격상해 기록. 공통 정리 라운드에서 `t.get("term")` 방어적 helper로 통합 검토.
+- **Coverage 피드 페이지 크기 제약(MTP 10건/TC 20건) → 수집 주기 대비 유실 가능. Clusterer 설계 시 cadence 결정 필요**
