@@ -4,7 +4,7 @@ from datetime import datetime
 
 @dataclass
 class EventMember:
-    item_id: str
+    item_hash: str  # CollectedItem.url_hash — not a repository row id, see PROGRESS.md
     role: str  # "origin" | "echo"
     source: str
     title: str

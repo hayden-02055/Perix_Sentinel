@@ -17,3 +17,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Clusterer match-window constants (SDD §2.3: kept as constants, not tuned in scoring_policies).
+MATCH_WINDOW_AFTER_H: int = 48
+MATCH_WINDOW_BEFORE_H: int = 6

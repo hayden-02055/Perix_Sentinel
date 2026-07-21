@@ -50,7 +50,7 @@ class CollectTrendsUseCase:
             try:
                 await self._publisher.publish([item for _, item in briefable])
                 for item_id, item in briefable:
-                    await self._repository.mark_briefed(item_id)
+                    await self._repository.mark_briefed_by_hash(item.url_hash)
                     item.is_briefed = True
                 briefed_count = len(briefable)
             except Exception as exc:

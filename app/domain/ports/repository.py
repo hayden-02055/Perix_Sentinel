@@ -21,5 +21,5 @@ class ItemRepositoryPort(ABC):
         ...
 
     @abstractmethod
-    async def mark_briefed(self, item_id: int) -> None:
+    async def mark_briefed_by_hash(self, url_hash: str) -> None:
         ...

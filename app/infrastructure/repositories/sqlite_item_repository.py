@@ -156,10 +156,10 @@ class SqliteItemRepository(ItemRepositoryPort):
                 row = await cursor.fetchone()
         return _row_to_item(row) if row else None
 
-    async def mark_briefed(self, item_id: int) -> None:
+    async def mark_briefed_by_hash(self, url_hash: str) -> None:
         async with aiosqlite.connect(_db_path()) as db:
             await db.execute(
-                "UPDATE collected_items SET is_briefed = 1, briefed_at = ? WHERE id = ?",
-                (now_utc().isoformat(), item_id),
+                "UPDATE collected_items SET is_briefed = 1, briefed_at = ? WHERE url_hash = ?",
+                (now_utc().isoformat(), url_hash),
             )
             await db.commit()

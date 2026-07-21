@@ -44,7 +44,7 @@ def _db_path() -> str:
 
 def _member_to_dict(member: EventMember) -> dict:
     return {
-        "item_id": member.item_id,
+        "item_hash": member.item_hash,
         "role": member.role,
         "source": member.source,
         "title": member.title,
@@ -55,7 +55,7 @@ def _member_to_dict(member: EventMember) -> dict:
 
 def _dict_to_member(data: dict) -> EventMember:
     return EventMember(
-        item_id=data["item_id"],
+        item_hash=data["item_hash"],
         role=data["role"],
         source=data["source"],
         title=data["title"],
@@ -103,6 +103,8 @@ class SqliteEventRepository(EventRepositoryPort):
         logger.info("SQLite events table initialized")
 
     async def upsert(self, event: Event) -> None:
+        if not event.event_id:
+            raise ValueError("Event.event_id must not be empty")
         async with aiosqlite.connect(_db_path()) as db:
             await db.execute(
                 """
@@ -119,8 +121,8 @@ class SqliteEventRepository(EventRepositoryPort):
                     diversity=excluded.diversity,
                     score=excluded.score,
                     importance=excluded.importance,
-                    is_briefed=excluded.is_briefed,
-                    briefed_at=excluded.briefed_at
+                    is_briefed=CASE WHEN events.is_briefed = 1 THEN 1 ELSE excluded.is_briefed END,
+                    briefed_at=CASE WHEN events.briefed_at IS NOT NULL THEN events.briefed_at ELSE excluded.briefed_at END
                 """,
                 (
                     event.event_id,

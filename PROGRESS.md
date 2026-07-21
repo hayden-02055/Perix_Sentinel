@@ -1,6 +1,6 @@
 # PROGRESS — Perix Sentinel Refactoring + Collector Revival
 
-기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_TechCrunch_Collector_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_MarkTechPost_Collector_SDD.md` / `docs/SDD/Clustering/Perix_Sentinel_Clusterer_Event_SDD.md`
+기준 문서: `docs/SDD/Perix_Sentinel_Refactoring_SDD.md` / `docs/SDD/Perix_Sentinel_Collector_Revival_SDD.md` / `docs/SDD/Perix_Sentinel_Test_Infra_Mistral_Wrapup_SDD.md` / `docs/SDD/Perix_Sentinel_arXiv_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HackerNews_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_NVIDIA_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_GoogleResearch_Collector_SDD.md` / `docs/SDD/Perix_Sentinel_HF_RegionTagging_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_TechCrunch_Collector_SDD.md` / `docs/SDD/Tier2 data collectors/Perix_Sentinel_MarkTechPost_Collector_SDD.md` / `docs/SDD/Clustering/Perix_Sentinel_Clusterer_Event_SDD.md` / `docs/SDD/Clustering/Perix_Sentinel_Clusterer_Impl_SDD_A2a_A3.md`
 
 ## 완료된 것
 
@@ -200,16 +200,41 @@
   - `tests/test_event_repository.py` 4종(round-trip/멱등성/mark_briefed/미존재 조회) — **66 passed** (기존 62 + 신규 4)
   - A2(클러스터링 로직·`get_unbriefed_since`·`DailyBriefingUseCase`·엔드포인트·스케줄러)는 미착수
 
+### Clusterer 구현 SDD (A2a + A3) — v0.2
+- **P0 — A1 리뷰 지적 2건 수정** ✅ (2026-07-21)
+  - `SqliteEventRepository.upsert()`: `ON CONFLICT` 절에서 `is_briefed`/`briefed_at`을 `CASE WHEN` 단조 증가로 변경 — 이미 브리핑된 Event가 재클러스터링으로 되돌아가지 않음
+  - 빈 `event_id` upsert 시 `ValueError` 발생하도록 가드 추가
+  - `tests/test_event_repository.py`에 회귀 테스트 2개 추가
+- **P1 — 개체 추출 v2** ✅
+  - `app/domain/services/entity_extractor.py` 신규 (순수 함수, I/O 없음)
+  - 조직 사전(`_ORG_ALIASES`) + 모델 패밀리 화이트리스트(`_MODEL_FAMILIES`) — SDD §2.1 결정대로 정규식 단독 방식 폐기
+  - 토크나이저에 아포스트로피(`'`)도 구분자로 추가(SDD에 없는 사항, "OpenAI's ..." 류 소유격 헤드라인에서 조직명 토큰이 깨지는 것을 막기 위한 최소 보강)
+  - `tests/test_entity_extractor.py`: 조직/모델 변형/A0 오탐 3종 배제 — 3 tests
+  - **실DB 100건 재측정(라이브 `perix_sentinel.db`, 1615건 중 랜덤 100)**: 모델 오탐 **0건** 확인(A0의 `February 2026`/`Scholars 2020`/`AutoScout24` 패턴 재현 안 됨) — DoD 충족
+- **P2 — clusterer.py** ✅
+  - `app/domain/services/clusterer.py` 신규 — `cluster(items) -> list[Event]`, I/O·DB 접근 0
+  - 3게이트(시간창 +48h/-6h → 개체 교집합 → 제목 Jaccard 타이브레이커) + HF 게이트3 예외(비-HF 우선) 구현
+  - `event_id = md5(origin.url_hash)`로 생성 강제(빈 값 발생 불가)
+  - `app/core/config.py`에 `MATCH_WINDOW_AFTER_H=48`, `MATCH_WINDOW_BEFORE_H=6` 모듈 상수 추가
+  - `tests/test_clusterer.py`: 7 tests — A0 음성 5쌍(실제 제목은 재구성, 원문 그대로는 아님) 전부 미매칭, 시간창 경계(+49h/-7h 탈락·+47h/-5h 통과), 개체 게이트, 타이브레이커, HF 예외, 단일귀속, `event_id` 멱등성
+- **P2 구현 리뷰 반영 (2026-07-21, `docs/notes/clusterer-impl-review.md`)** ✅ — 리뷰 지적 3건 + 사용자 결정 반영
+  1. **게이트2 unique-candidate 판정 기준 수정**: "시간창 내 전체 후보 수" → "시간창 내 **같은 조직** 후보 수"로 변경(`clusterer.py`의 `org_overlap_count`). 기존 방식은 무관한 조직의 origin이 같은 시간창에 있다는 이유만으로 유일 후보 판정이 깨져 false negative를 유발했음(예: OpenAI coverage가 모델명 없이도 OpenAI origin에 붙어야 하는데, 시간창에 무관한 NVIDIA origin이 있으면 실패). 회귀 테스트 `test_clusterer_unique_candidate_is_per_org_not_per_window` 추가 — 수정 전 로직으로는 실패함을 확인.
+  2. **`EventMember.item_id` → `item_hash`로 개명**: 필드가 DB 정수 id가 아니라 `CollectedItem.url_hash`라는 사실을 타입/이름 레벨에서 명확히 함(사용자 결정, "지금이 무료"). `event.py`/`sqlite_event_repository.py`/`clusterer.py`/테스트 전체 갱신.
+  3. **`ItemRepositoryPort.mark_briefed(item_id: int)` 폐기 → `mark_briefed_by_hash(url_hash: str)` 신설**: `SqliteItemRepository`(WHERE url_hash=?), `CollectTrendsUseCase` 갱신. 사용자 결정에 따라 A3의 `get_unbriefed_since()`는 DB 정수 id를 싣지 않고 `CollectedItem`(url_hash 포함)만 반환하는 방향으로 §7.1 미결 사항이 해소됨 — 브리핑 완료 표시는 항상 url_hash 기준.
+  - **층화 재측정(P1 DoD 실질 충족)**: 단순 랜덤 100건은 OpenAI가 DB의 65%를 차지해 편향 위험 → arXiv 30 / GitHub Trending 20 / Hacker News 20 / 나머지 소스 30건으로 층화 재추출. 모델 히트 13건(Hacker News 8, OpenAI 5), **오탐 0건** — arXiv·GitHub 히트 0건은 두 소스의 제목이 브랜드 모델명을 잘 언급하지 않는 정상적인 재현율 특성(회귀 아님).
+- **전체 회귀**: 66 + 13(P0 2 + P1 3 + P2 8) = **79 passed**
+- **A3(Phase 2 배선: `get_unbriefed_since`/`DailyBriefingUseCase`/`CollectTrendsUseCase` 정리/스케줄러)는 SDD §8 "P2에서 한 번 끊는다" 지시에 따라 미착수** — 사용자 확인 후 진행
+
 ## 진행 중인 것
-- (없음)
+- (없음 — P2 게이트에서 정지, 사용자 확인 대기)
 
 ## 다음 단계
-- **Clusterer A2 재개 조건 충족 여부 확인** — origin 컬렉터가 Alibaba/Moonshot 등으로 확장되거나, 기존 origin 소스에서 게이트를 통과하는 사건 쌍이 자연 발생하면 재개 (`docs/notes/clusterer-event-a0-observation.md` 참조)
+- **A3 착수 여부 확인** — 승인 시 `get_unbriefed_since`(item id 전달 방식 확정 포함) → `DailyBriefingUseCase` → `CollectTrendsUseCase` 정리 → `BriefingGenerator` Event digest → `/briefing/run` → APScheduler 순으로 진행(SDD §8 P3~P5)
+- **A2b(양성 골든 fixture) 재평가는 2주 관측 후** — 기존 origin 소스(OpenAI·Anthropic·Google·Meta·Mistral·NVIDIA)의 메이저 릴리스가 자연 발생해 게이트2를 통과하는 실제 쌍이 나오는지 관찰 (SDD §1.3, 기존 "origin 컬렉터 확장" 재개 조건은 폐기됨 — HF region 흡수 결정과 충돌하기 때문)
 - Tier2 coverage 소스 2개(TechCrunch·MarkTechPost) 확보 완료. 그 외 갈림길:
   1. **타 컬렉터 region 백필 (SDD §8)** — OpenAI·Anthropic·arXiv·HN 등 기존 컬렉터에 `function/domain/region` 상수 태그 추가 (HF와 달리 전부 상수라 간단)
   2. **나머지 coverage 소스(MIT TR·Verge·Decoder)** — 각각 별도 SDD
   3. **P2 (Refactoring SDD)** — `BaseHtmlCollector` 도입, HTML 컬렉터 5개 슬림화
-  4. **Origin 컬렉터 확장(Alibaba·Moonshot 등)** — Clusterer ground truth 확보를 위한 선행 작업으로 고려 가능
 
 ## 미결 결정사항
 - **`_recency_score` 정책**: DB에 저장된 구형 naive datetime 문자열 읽기 시 aware 승격 어댑터(SDD R3 §8 완화책) 미구현. 현재 신규 수집 아이템은 모두 aware라 문제 없으나, DB 기존 행 재처리 시 주의 필요.
@@ -222,5 +247,10 @@
 - **MarkTechPost boilerplate와 Clusterer 매칭 오염**: `summary` 말미에 모든 항목 공통 상수 문자열(`The post <a href=...>...</a> appeared first on <a href=...>MarkTechPost</a>.`)이 붙는다. **해결됨(설계 차원)**: Clusterer + Event 모델 SDD §2.6이 매칭 입력을 `title`로 한정하기로 결정해 이 문제를 회피한다. `summary`는 브리핑 렌더링에만 쓰인다.
 - **RSS `t["term"]` 직접 접근 가용성 리스크**: OpenAI·NVIDIA·Google Research·TechCrunch·MarkTechPost 5개 컬렉터가 `t["term"]` 직접 접근 동일 패턴. tag object에 `term` 키가 없으면 entry 하나 때문에 `collect()` 전체가 `KeyError`로 중단된다. 스타일 부채가 아니라 **가용성 리스크**로 격상해 기록. 공통 정리 라운드에서 `t.get("term")` 방어적 helper로 통합 검토.
 - **Coverage 피드 페이지 크기 제약(MTP 10건/TC 20건) → 수집 주기 대비 유실 가능. Clusterer 설계 시 cadence 결정 필요**
-- **Clusterer ground truth 부재 (신규, 2026-07-21)**: origin 컬렉터 세트가 coverage가 다루는 조직(Alibaba·Moonshot·DeepSeek·Zhipu)을 커버하지 않아, 실데이터로 A2(클러스터링 로직) 골든 테스트를 만들 수 없다. `docs/notes/clusterer-event-a0-observation.md`의 재개 조건 충족 전까지 A2 착수 보류.
-- **모델 추출 정규식 오탐 (신규, 2026-07-21)**: `_MODEL_RE`가 `"February 2026"`, `"Scholars 2020"` 같은 날짜류 문자열을 모델명으로 오탐. A2 착수 시 가드 로직(날짜 패턴 제외 등) 필요.
+- ~~**Clusterer ground truth 부재**~~ — **해결(재정의)**: Clusterer 구현 SDD v0.2 §1.1이 "양성 쌍 0개"와 "clusterer 로직 검증"을 분리 — 음성 쌍 5건 + 경계 테스트로 A2a(로직)는 진행 가능하다고 재해석함. A2b(양성 골든)만 2주 관측 후 재평가로 이월(위 "다음 단계" 참조).
+- ~~**모델 추출 정규식 오탐**~~ — **해결**: `_MODEL_RE` 정규식 폐기, `app/domain/services/entity_extractor.py`의 조직 사전+모델 패밀리 화이트리스트로 교체. 실DB 100건 재측정에서 오탐 0건 확인(위 P1 참조).
+- ~~**`item_id`가 int가 아닌 `url_hash`(str) 사용**~~ — **해결(결정됨, 2026-07-21)**: `EventMember.item_id` → `item_hash`로 개명, `ItemRepositoryPort.mark_briefed(item_id: int)` → `mark_briefed_by_hash(url_hash: str)`로 교체. A3의 `get_unbriefed_since()`는 DB 정수 id를 아예 싣지 않고 `CollectedItem`만 반환하는 방향으로 확정 — url_hash가 이미 UNIQUE 컬럼이라 브리핑 완료 표시에 충분함.
+- **HF title 구조 문제 (신규, 2026-07-21)**: HuggingFace 컬렉터의 `title`이 `model_id`(예: `"bartowski/Qwen3.6-GGUF"`)라 자연어 헤드라인과 다르다. 게이트3(Jaccard)는 SDD §2.2 결정대로 건너뛰지만, 업로더가 원저작자와 다른 경우(제3자 파인튜닝/양자화) 조직 개체 추출 자체가 비어버릴 수 있음(A0 pair #4가 실측 사례) — A2b 양성 데이터 확보 시 재검토 필요.
+- **`int`→`str` ID 전면 전환 미결**: `ItemRepositoryPort.get_by_id(item_id: int)`는 여전히 정수 id를 쓰고, `EventMember.item_hash`는 문자열 url_hash를 쓴다 — 두 ID 체계가 공존한다. 전면 전환은 비범위(SDD §4)로 부채만 기록.
+- **`entity_extractor.py`의 넓은 alias 중첩 (신규, 2026-07-21, `clusterer-impl-review.md` #2)**: `"command"`가 Cohere 조직 alias이자 모델 패밀리로 동시에 등록돼 있어, 일반 문장의 "command"가 `org={"cohere"}`+`model={("command","")}`로 오추출될 위험이 있음. `"phi"`/`"meta"`도 비슷한 다의성 위험. 실DB 층화 100건 재측정(arXiv30·GitHub20·HN20·기타30)에서는 오탐 0건이었으나, 장기 운영 샘플에서 별도 카운트로 관찰 필요 — 아직 가드 미적용.
+- **토크나이저 아포스트로피 처리 (신규, 2026-07-21, SDD에 없던 보강)**: `entity_extractor.tokenize()`가 SDD §5 명세에 없는 아포스트로피(`'`)도 구분자로 처리하도록 확장함 — "OpenAI's GPT-5.5" 같은 소유격 헤드라인에서 조직명이 `"openai's"` 한 토큰으로 붙어버려 별칭 매칭이 깨지는 것을 막기 위함. 리뷰 시 SDD 갱신 여부 확인 필요.

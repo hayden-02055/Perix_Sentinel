@@ -1,9 +1,9 @@
 """Structural test for the Event model + SqliteEventRepository (A1 scope).
 
-No clustering logic is exercised here (that is A2, deferred pending real
-ground-truth pairs per docs/notes/clusterer-event-a0-observation.md). This
-only pins the schema, JSON round-trip of members/entities, and the upsert
-idempotency the SDD's event_id design (md5 of origin url_hash) relies on.
+No clustering logic is exercised here (see tests/test_clusterer.py for A2a).
+This only pins the schema, JSON round-trip of members/entities, and the
+upsert idempotency the SDD's event_id design (md5 of origin url_hash) relies
+on, plus the monotonic is_briefed/briefed_at guarantee from the A1 review.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def _make_event(event_id: str = "abc123") -> Event:
         occurred_at=occurred_at,
         members=[
             EventMember(
-                item_id="1",
+                item_hash="1",
                 role="origin",
                 source="OpenAI",
                 title="Introducing GPT-5.5 agents",
@@ -40,7 +40,7 @@ def _make_event(event_id: str = "abc123") -> Event:
                 published_at=occurred_at,
             ),
             EventMember(
-                item_id="2",
+                item_hash="2",
                 role="echo",
                 source="TechCrunch",
                 title="OpenAI launches GPT-5.5 with agentic tooling",
@@ -107,3 +107,35 @@ async def test_mark_briefed_sets_flag_and_timestamp(repo):
 @pytest.mark.asyncio
 async def test_get_by_id_returns_none_when_missing(repo):
     assert await repo.get_by_id("does-not-exist") is None
+
+
+@pytest.mark.asyncio
+async def test_upsert_preserves_briefed(repo):
+    """Re-clustering the same event_id must not un-brief an already-briefed Event (SDD A1 review)."""
+    event = _make_event(event_id="brief-me")
+    await repo.upsert(event)
+    await repo.mark_briefed("brief-me")
+
+    briefed = await repo.get_by_id("brief-me")
+    assert briefed.is_briefed is True
+    assert briefed.briefed_at is not None
+    original_briefed_at = briefed.briefed_at
+
+    # Simulate a fresh clusterer run producing the same Event with defaults reset.
+    re_clustered = _make_event(event_id="brief-me")
+    re_clustered.is_briefed = False
+    re_clustered.briefed_at = None
+    re_clustered.echo_count = 5
+    await repo.upsert(re_clustered)
+
+    fetched = await repo.get_by_id("brief-me")
+    assert fetched.is_briefed is True
+    assert fetched.briefed_at == original_briefed_at
+    assert fetched.echo_count == 5
+
+
+@pytest.mark.asyncio
+async def test_upsert_rejects_empty_event_id(repo):
+    event = _make_event(event_id="")
+    with pytest.raises(ValueError):
+        await repo.upsert(event)

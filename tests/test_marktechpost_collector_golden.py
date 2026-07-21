@@ -64,7 +64,7 @@ async def test_coverage_use_case_never_briefs(monkeypatch):
     mock_repo = MagicMock()
     mock_repo.exists_by_hash = AsyncMock(return_value=False)
     mock_repo.save = AsyncMock(return_value=1)
-    mock_repo.mark_briefed = AsyncMock()
+    mock_repo.mark_briefed_by_hash = AsyncMock()
 
     use_case = CollectTrendsUseCase(
         collector=MarkTechPostRssCollector(),
