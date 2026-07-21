@@ -172,7 +172,7 @@
   - `https://www.marktechpost.com/feed/` RSS 2.0, bozo=False
   - 10건 전부 AI 관련 카테고리 보유(비-AI 0%, SDD 예상대로 <15% 임계값 이하) → **카테고리 필터 불필요**
   - `published_parsed` 정상 채워짐(UTC)
-  - `summary`에 `<img>` 등 HTML 혼입 **없음**(Google Research 때와 달리 정제 불필요) — WordPress boilerplate("The post ... appeared first on MarkTechPost.")만 포함, 원문 그대로 유지
+  - `<img>` 혼입은 없음(Google Research 때와 달리 정제 불필요). 다만 WordPress boilerplate(`The post ... appeared first on MarkTechPost.`)에 `<a href=...>` 링크 HTML이 포함되며, 원문 그대로 유지한다
   - SDD §6 가정과 실측 100% 일치 → §6·§7 갱신 불필요
 - **A1~A3 — `MarkTechPostRssCollector` 구현 + 배선** ✅
   - `app/infrastructure/collectors/marktechpost_rss_collector.py` — `TechCrunchRssCollector` 복사 기반, `RSS_URL`/`source="MarkTechPost"`/`metadata.feed="marktechpost-ai"` 교체
@@ -203,3 +203,5 @@
 - **진행 방식(합의됨)**: 페이즈마다 멈춰서 확인. 그린이어도 자동 다음 페이즈 진행하지 않음.
 - **`baidu` HF region 미포함**: A0에서 `baidu/Unlimited-OCR`이 트렌딩에 등장. `baidu`는 중국 조직이나 SDD `_ORG_REGION` 목록에 없어 현재 `global`. `_ORG_REGION` 확장 시 추가 필요.
 - **타 컬렉터 region 백필 미구현**: OpenAI·Anthropic·arXiv·HN·NVIDIA·GR 등 기존 컬렉터에 `function/domain/region` 상수 태그 없음. SDD §8 다음 작업으로 분리됨.
+- **MarkTechPost boilerplate와 Clusterer 매칭 오염**: `summary` 말미에 모든 항목 공통 상수 문자열(`The post <a href=...>...</a> appeared first on <a href=...>MarkTechPost</a>.`)이 붙는다. Clusterer가 텍스트 유사도로 origin↔coverage를 매칭할 때 (i) MarkTechPost 항목끼리 유사도가 인위적으로 상승, (ii) origin 항목과의 유사도는 상대적으로 희석 — 두 방향 모두 오탐 요인이 될 수 있다. 지금은 정제하지 않고 수집 계약을 고정 유지하되, Clusterer SDD의 A0 관측 항목으로 이월한다.
+- **RSS `t["term"]` 직접 접근 가용성 리스크**: OpenAI·NVIDIA·Google Research·TechCrunch·MarkTechPost 5개 컬렉터가 `t["term"]` 직접 접근 동일 패턴. tag object에 `term` 키가 없으면 entry 하나 때문에 `collect()` 전체가 `KeyError`로 중단된다. 스타일 부채가 아니라 **가용성 리스크**로 격상해 기록. 공통 정리 라운드에서 `t.get("term")` 방어적 helper로 통합 검토.

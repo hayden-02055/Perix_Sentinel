@@ -55,6 +55,15 @@
 - golden fixture가 실제 MarkTechPost RSS 구조의 카테고리, UTC publish time, WordPress summary boilerplate를 함께 고정한다.
 - `tests/test_marktechpost_collector_golden.py`가 parser output과 `publisher=None` 시 브리핑 0건 계약을 둘 다 확인한다.
 
+## A0 비-AI 비율 실측 (2026-07-21)
+
+- 측정 대상: `https://www.marktechpost.com/feed/` 라이브 덤프
+- **주의**: 피드 자체가 WordPress 기본 페이지 크기인 **10건만** 반환한다 (`MAX_ITEMS=50`은 상한일 뿐, 실제 feed.entries 길이가 10). "50건 기준" 측정은 소스 쪽 제약으로 불가능해 **실측 가능한 전량(10건)**으로 산출했다.
+- 판정 기준: 각 entry의 `<category>` 태그 집합에 AI 직접 마커(`artificial intelligence`, `ai shorts`, `ai infrastructure`, `ai agents`, `agentic ai`, `machine learning`, `language model`, `large language model`, `llm`)가 하나라도 있으면 AI-tagged로 분류.
+- **결과: 비-AI 0건 / 10건 = 0%** — 10건 전부 AI 직접 카테고리 보유.
+- 판단: Google Research 선례의 임계값(15%)을 크게 하회 → **카테고리 서브피드 전환 불필요**, SDD §5의 "매체 전체가 AI 전문"이라는 가정이 실측으로 확인됨. §5·§7 갱신 불필요.
+- 한계: 표본이 10건으로 작아(Google Research·NVIDIA 등 100건 표본 대비) 통계적 신뢰도는 낮다. 페이지네이션(`?paged=N`)으로 표본을 늘리는 것은 이번 마무리 작업 범위 밖이므로, 향후 비-AI 콘텐츠가 실제로 관측되면 재측정한다.
+
 ## 검증 결과
 
 - `.venv/bin/pytest tests/test_marktechpost_collector_golden.py`
