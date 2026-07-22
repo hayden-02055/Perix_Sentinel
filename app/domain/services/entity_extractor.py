@@ -35,15 +35,19 @@ _MODEL_FAMILIES: set[str] = {
 }
 
 _VERSION_RE = re.compile(r"^(\d+(?:\.\d+)*)")
-_SEP_RE = re.compile(r"[-_/']")
+_SEP_RE = re.compile(r"[-_/',]")
 
 
 def tokenize(text: str) -> list[str]:
-    """Lowercase *text* and split on hyphen/underscore/slash/apostrophe + whitespace.
+    """Lowercase *text* and split on hyphen/underscore/slash/apostrophe/comma + whitespace.
 
     Apostrophes are treated as separators (not stripped) so possessive
     headlines like "OpenAI's GPT-5.5" still yield a clean "openai" token
-    for org-alias matching.
+    for org-alias matching. Commas are separators too — otherwise a
+    trailing comma (e.g. "Science," in "Claude Science, an AI workbench...")
+    keeps a word from matching its comma-free form elsewhere, which
+    understates title Jaccard similarity (found in origin-origin A0
+    observation, docs/notes/clusterer-origin-origin-a0-observation.md).
     """
     normalized = _SEP_RE.sub(" ", text.lower())
     return normalized.split()

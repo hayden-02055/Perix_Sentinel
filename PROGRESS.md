@@ -225,6 +225,18 @@
 - **전체 회귀**: 66 + 13(P0 2 + P1 3 + P2 8) = **79 passed**
 - **A3(Phase 2 배선: `get_unbriefed_since`/`DailyBriefingUseCase`/`CollectTrendsUseCase` 정리/스케줄러)는 SDD §8 "P2에서 한 번 끊는다" 지시에 따라 미착수** — 사용자 확인 후 진행
 
+### Origin-Origin 중복 A0 관측 (신규, 2026-07-22, `docs/notes/clusterer-origin-origin-a0-observation.md`)
+- **실측 결과: origin 소스끼리(같은 조직 언급 후보) 705쌍 중 48h 시간창 내 35쌍, 그중 실제 동일 사건은 1쌍뿐 (Anthropic "Claude Science" ↔ Hacker News "Claude Science", Δt=17.1h)**
+- **결정: origin-origin 중복 병합 SDD는 지금 작성하지 않는다.** 표본 1건으로 임계값(시간창/jaccard)을 정하면 검증 불가능한 추측이 됨 — origin-vs-coverage A0(07-21)와 동일한 구조적 결론 재현.
+- **부수 발견**: `entity_extractor.tokenize()`가 `,`를 구분자로 처리하지 않아 트레일링 콤마 토큰이 jaccard를 실제보다 낮게 만듦 (유일한 진짜 양성 쌍이 jaccard=0.09로 최하위권 — jaccard를 1차 게이트로 쓰면 안 되는 근거 재확인, 콤마 제거 시 0.20으로 상승 확인).
+- **재개 조건**: 2주 추가 관측 후 재평가(A2b와 같은 주기), 또는 임계값 없는 "org overlap + ≤48h + 사람 확인 큐" 저위험 휴리스틱만 우선 검토.
+- **콤마 버그 수정 후 재실행 확인 (2026-07-22)**: 후보 수(705쌍/48h창 35쌍) 불변, 진짜 양성 쌍 jaccard만 0.09→0.20 정정, 진짜 동일사건 여전히 1건. **0.06% 중복률은 측정 아티팩트가 아니라 실측치로 확정.** 최고 jaccard(0.27)가 여전히 가짜라는 점도 재확인 — jaccard 1차 게이트 불가 결론 유지.
+
+### Origin ↔ TechCrunch 재측정 (신규, 2026-07-22, `docs/notes/clusterer-origin-coverage-a0-rerun.md`)
+- **프로덕션 gate1(-6h/+48h, `clusterer.py` 실제 함수 재사용) + org 교집합: 매칭 0쌍 (0/20 TechCrunch row)** — 07-21 라이브 재확인과 동일 결론 재현.
+- 시간창 무제한 org-only 매칭은 230쌍 나오지만 229쌍이 Δt 168h 초과("openai" 조직명만으로 OpenAI 아카이브 1,059건과 무차별 매칭), 가장 근접한 쌍(Δt=115.6h)조차 실제로는 무관한 사건 — 대표 5케이스 전부 오탐 확인.
+- **결론 변경 없음**: origin↔coverage 자동 병합 SDD는 여전히 실증 근거 없음.
+
 ## 진행 중인 것
 - (없음 — P2 게이트에서 정지, 사용자 확인 대기)
 
@@ -254,3 +266,5 @@
 - **`int`→`str` ID 전면 전환 미결**: `ItemRepositoryPort.get_by_id(item_id: int)`는 여전히 정수 id를 쓰고, `EventMember.item_hash`는 문자열 url_hash를 쓴다 — 두 ID 체계가 공존한다. 전면 전환은 비범위(SDD §4)로 부채만 기록.
 - **`entity_extractor.py`의 넓은 alias 중첩 (신규, 2026-07-21, `clusterer-impl-review.md` #2)**: `"command"`가 Cohere 조직 alias이자 모델 패밀리로 동시에 등록돼 있어, 일반 문장의 "command"가 `org={"cohere"}`+`model={("command","")}`로 오추출될 위험이 있음. `"phi"`/`"meta"`도 비슷한 다의성 위험. 실DB 층화 100건 재측정(arXiv30·GitHub20·HN20·기타30)에서는 오탐 0건이었으나, 장기 운영 샘플에서 별도 카운트로 관찰 필요 — 아직 가드 미적용.
 - **토크나이저 아포스트로피 처리 (신규, 2026-07-21, SDD에 없던 보강)**: `entity_extractor.tokenize()`가 SDD §5 명세에 없는 아포스트로피(`'`)도 구분자로 처리하도록 확장함 — "OpenAI's GPT-5.5" 같은 소유격 헤드라인에서 조직명이 `"openai's"` 한 토큰으로 붙어버려 별칭 매칭이 깨지는 것을 막기 위함. 리뷰 시 SDD 갱신 여부 확인 필요.
+- ~~**토크나이저 콤마 미처리**~~ — **해결 (2026-07-22)**: `entity_extractor.py`의 `_SEP_RE`에 `,` 추가(`[-_/',]`). `tests/test_entity_extractor.py::test_tokenize_strips_trailing_comma` 회귀 테스트 추가. **80 passed** (기존 79 + 신규 1).
+- **Origin-origin 중복 SDD 보류 (신규, 2026-07-22)**: 위 관측대로 실제 origin-origin 중복 표본이 1건뿐이라 SDD 작성을 보류함. 2주 재관측 또는 임계값 없는 휴리스틱 우선 검토가 재개 조건.

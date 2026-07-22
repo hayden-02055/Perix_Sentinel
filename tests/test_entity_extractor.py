@@ -6,7 +6,7 @@ structurally exclude them without any date-pattern guard.
 """
 from __future__ import annotations
 
-from app.domain.services.entity_extractor import extract_entities
+from app.domain.services.entity_extractor import extract_entities, tokenize
 
 
 def test_extract_org():
@@ -28,3 +28,13 @@ def test_extract_rejects_a0_false_positives():
     assert extract_entities("Disrupting malicious uses of AI | February 2026")["model"] == set()
     assert extract_entities("OpenAI Scholars 2020: Final projects")["model"] == set()
     assert extract_entities("AutoScout24 scales engineering with AI-powered workflows")["model"] == set()
+
+
+def test_tokenize_strips_trailing_comma():
+    # origin-origin A0 (docs/notes/clusterer-origin-origin-a0-observation.md): a trailing
+    # comma kept "Science," from matching "Science" and understated title Jaccard for the
+    # one real duplicate found (Anthropic "Claude Science, an AI workbench..." vs HN "Claude Science").
+    tokens = tokenize("Claude Science, an AI workbench for scientists, is now available")
+    assert "science" in tokens
+    assert "science," not in tokens
+    assert tokenize("Claude Science") == ["claude", "science"]
