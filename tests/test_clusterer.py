@@ -12,7 +12,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.domain.models.collected_item import CollectedItem
-from app.domain.services.clusterer import cluster
+from app.domain.services.clusterer import FuzzyClusterer
+
+# Fuzzy logic is isolated into FuzzyClusterer (Passthrough Clusterer SDD §6);
+# these legacy gate tests exercise it unchanged via the class method.
+cluster = FuzzyClusterer().cluster
 
 
 def _item(source: str, title: str, published_at: datetime, url: str) -> CollectedItem:

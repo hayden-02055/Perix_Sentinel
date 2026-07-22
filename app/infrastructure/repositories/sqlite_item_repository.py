@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 import aiosqlite
 
@@ -155,6 +156,16 @@ class SqliteItemRepository(ItemRepositoryPort):
             ) as cursor:
                 row = await cursor.fetchone()
         return _row_to_item(row) if row else None
+
+    async def get_recent(self, limit: int = 500) -> list[CollectedItem]:
+        async with aiosqlite.connect(_db_path()) as db:
+            async with db.execute(
+                f"SELECT {SELECT_COLUMNS} FROM collected_items "
+                "ORDER BY published_at DESC, id DESC LIMIT ?",
+                (limit,),
+            ) as cursor:
+                rows = await cursor.fetchall()
+        return [_row_to_item(row) for row in rows]
 
     async def mark_briefed_by_hash(self, url_hash: str) -> None:
         async with aiosqlite.connect(_db_path()) as db:

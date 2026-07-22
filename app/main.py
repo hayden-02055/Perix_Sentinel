@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.infrastructure.repositories.sqlite_event_repository import SqliteEventRepository
 from app.infrastructure.repositories.sqlite_item_repository import SqliteItemRepository
+from app.interface.api.cluster import router as cluster_router
 from app.interface.api.collect import router as collect_router
 from app.interface.api.health import router as health_router
 from app.interface.api.items import router as items_router
@@ -32,3 +33,4 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(collect_router)
 app.include_router(items_router)
+app.include_router(cluster_router)

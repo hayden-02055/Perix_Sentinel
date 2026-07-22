@@ -21,5 +21,9 @@ class ItemRepositoryPort(ABC):
         ...
 
     @abstractmethod
+    async def get_recent(self, limit: int = 500) -> list[CollectedItem]:
+        ...
+
+    @abstractmethod
     async def mark_briefed_by_hash(self, url_hash: str) -> None:
         ...

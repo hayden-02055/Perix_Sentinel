@@ -237,8 +237,34 @@
 - 시간창 무제한 org-only 매칭은 230쌍 나오지만 229쌍이 Δt 168h 초과("openai" 조직명만으로 OpenAI 아카이브 1,059건과 무차별 매칭), 가장 근접한 쌍(Δt=115.6h)조차 실제로는 무관한 사건 — 대표 5케이스 전부 오탐 확인.
 - **결론 변경 없음**: origin↔coverage 자동 병합 SDD는 여전히 실증 근거 없음.
 
+### Passthrough Clusterer SDD (v0.1) — 임계값 없는 정확중복 클러스터러 (신규, 2026-07-22)
+- **근거**: origin↔origin 0.06% / origin↔coverage 0% 실측으로 퍼지 자동병합 검증 불가 → 임계값 없는 정확중복만 지금 구현, 파이프라인 배선 검증. 기존 퍼지 3게이트는 삭제 없이 격리(폴리싱 슬롯).
+- **A0 관측** ✅ (`docs/notes/clusterer-passthrough-a0.md`, Q1~Q7 + 요약)
+  - 주요 불일치: §5 Event shape(items/primary_item/source_count…)가 기존 영속 `Event`(origin/echo members)와 다름. §3은 "영속화 안 함"인데 앞선 A1이 이미 `events` 테이블 영속화. **사용자 결정: 신규 `PassthroughEvent`(in-memory) 별도 생성, 기존 Event/repo/table은 퍼지 슬롯으로 보존.**
+  - `domain`/`region`은 top-level 아님 → `item.metadata.get(...)`로 읽음(I4).
+  - 기존 `clusterer.py`는 미배선 스캐폴딩(테스트만 import) → 격리해도 라이브 무영향.
+- **A1 — PassthroughEvent 모델** ✅ `app/domain/models/passthrough_event.py` (§5 계약)
+- **A2 — ExactDupClusterer + 퍼지 격리** ✅
+  - `app/core/url_utils.py` 신규: `normalize_url`(scheme/host 소문자·trailing slash·fragment 제거·utm_*/ref/source/fbclid 등 블랙리스트 제거·잔여 쿼리 정렬)·`normalize_title`·`canonical_key`
+  - `ExactDupClusterer(ClustererPort).cluster(items) -> list[PassthroughEvent]` — canonical_key 그룹핑, 소스 무관(하드코딩 분기 0, 테스트로 고정), `event_id=md5(canonical_key)`, `(first_seen, event_id)` 정렬로 입력순서 무관 결정론
+  - 기존 퍼지 3게이트 → `FuzzyClusterer` 클래스로 격리(`_legacy_fuzzy_cluster` 위임, 기존 `Event` 반환, `ClustererPort` 미구현). `_gate*` 로직·소스 하드코딩 원문 보존.
+  - `app/domain/ports/clusterer_port.py` 신규
+  - `tests/test_clusterer.py` import만 `FuzzyClusterer().cluster`로 기계적 갱신(로직·기대값 불변, 7종 그린)
+- **A3 — 읽기 경로 배선** ✅ (라이브 per-item collect 경로 무손상)
+  - `ItemRepositoryPort.get_recent(limit)` + SQLite 구현(published_at DESC)
+  - `GenerateEventsUseCase`(read→cluster→in-memory brief, 영속화·발행 없음)
+  - `app/interface/api/cluster.py` `POST /cluster/preview` + `main.py` 라우터 등록
+  - **부수 버그 수정**: `sqlite_item_repository._row_to_item`이 `datetime` 미import → `get_by_id`/`get_unsummarized`/신규 `get_recent`이 `NameError`날 잠재버그. 읽기경로가 이에 의존하므로 `from datetime import datetime` 추가.
+  - **레거시 naive datetime 방어**: 구형 DB 행(naive)과 신규(aware) 혼재 시 정렬 crash → 클러스터러 내부 `_aware()`로 naive→UTC 승격(리포지토리 읽기 의미는 불변, 방어를 클러스터러에 국한).
+- **A4 — end-to-end 실행** ✅
+  - 실DB 1615건: collect→cluster→brief 완주, **1615 events / merged 0 / deterministic=True**. merged 0은 정상 — DB가 저장시 `url_hash` UNIQUE로 이미 정확중복 제거(정확-URL 쌍은 애초에 공존 불가), utm-variant도 실데이터에 없음. 패스스루 설계대로 대부분 1-item Event.
+  - **dedup 2계층 범위 차이(정밀화)**: DB `url_hash` UNIQUE는 **전역·raw URL 완전일치**만 제거(`md5(item.url)`, source 미포함, 정규화 없음). ExactDupClusterer는 그 위에서 **normalize_url 동치**(utm_*/ref/슬래시/대소문자)까지 추가 병합 → `?utm_source=x`만 다른 쌍은 raw가 달라 DB엔 둘 다 저장되지만 clusterer가 병합(골든 G2). 즉 정확-URL 쌍만 구조적으로 공존 불가, 정규화-동치 쌍은 가능.
+- **골든/결정론 테스트** ✅ `tests/test_clusterer_passthrough.py`(G1 정확중복 병합/G2 utm 정규화 병합/G3 패스스루/G4 진짜양성 미병합(의도)/G5 URL-less title fallback/결정론/소스무관) + `tests/test_url_utils.py`(6종). **전체 93 passed** (기존 80 + url_utils 6 + passthrough 7).
+- **스코어링 파일 무수정 확인** ✅ (`scoring_engine.py`/`scoring_policies.py` git diff 0). config.py도 무변경(MATCH_WINDOW 상수 기존).
+- **폴리싱 이관(근거 명시)**: 퍼지(gate1/jaccard/org) — 실증근거 0.06%/0%, coverage 5개 상시운영 후 재측정. origin↔coverage — 동일사유. SimilarityPort/임베딩 — 미구현. PassthroughEvent DB 영속화 — 필요성 확인 후 별건(현재 in-memory). `source_count`/`source_diversity` 스코어링 반영 — 다음 단계.
+
 ## 진행 중인 것
-- (없음 — P2 게이트에서 정지, 사용자 확인 대기)
+- (없음 — Passthrough Clusterer 완료, 사용자 확인 대기)
 
 ## 다음 단계
 - **A3 착수 여부 확인** — 승인 시 `get_unbriefed_since`(item id 전달 방식 확정 포함) → `DailyBriefingUseCase` → `CollectTrendsUseCase` 정리 → `BriefingGenerator` Event digest → `/briefing/run` → APScheduler 순으로 진행(SDD §8 P3~P5)

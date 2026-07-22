@@ -1,25 +1,96 @@
-"""Clusterer (SDD Perix_Sentinel_Clusterer_Impl_SDD_A2a_A3 §6).
+"""Clusterer — two implementations, one active (SDD Passthrough Clusterer §6).
 
-Pure function, no I/O / DB access — `cluster(items) -> list[Event]`. Every
-origin item becomes exactly one Event (possibly with zero echo members);
-coverage items attach as echo members to at most one Event, or attach to
-none ("미귀속, 폐기 아님" — simply absent from the return value, the item
-itself is left untouched for a future run).
+ACTIVE: ``ExactDupClusterer`` (SDD Passthrough Clusterer, this phase).
+Source-agnostic, deterministic, threshold-free. Merges items only when their
+``canonical_key`` (normalized URL, or normalized title when URL-less) is
+identical; everything else passes through as a 1-item ``PassthroughEvent``.
 
-Gate order matters (§6 pseudocode / test_clusterer_time_window): time
-window is evaluated before the entity gate, so a same-family model within
-the org can still be rejected purely on elapsed time (see the "NVIDIA
-Cosmos 3" A0 case, +159h).
+ISOLATED (fuzzy slot, NOT deleted): ``FuzzyClusterer`` wraps the legacy
+3-gate matching from the earlier A2a SDD (time window → entity intersect →
+Jaccard tiebreak, with source-name special-casing). It is retained verbatim
+as the polishing-phase replacement point and is intentionally NOT wired into
+the active pipeline. The empirical case for enabling it is absent (origin↔origin
+0.06%, origin↔coverage 0% — see docs/notes/clusterer-*-a0*.md).
 """
 from __future__ import annotations
 
 import hashlib
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.core.config import MATCH_WINDOW_AFTER_H, MATCH_WINDOW_BEFORE_H
+from app.core.url_utils import canonical_key, normalize_url
 from app.domain.models.collected_item import CollectedItem
 from app.domain.models.event import Event, EventMember
+from app.domain.models.passthrough_event import PassthroughEvent
+from app.domain.ports.clusterer_port import ClustererPort
 from app.domain.services.entity_extractor import extract_entities, tokenize
+
+
+# ---------------------------------------------------------------------------
+# ACTIVE — ExactDupClusterer (SDD Passthrough Clusterer §5)
+# ---------------------------------------------------------------------------
+
+def _has_url(item: CollectedItem) -> bool:
+    return bool(item.url and item.url.strip())
+
+
+def _distinct_sorted(values) -> list[str]:
+    return sorted({v for v in values if v})
+
+
+def _aware(dt: datetime) -> datetime:
+    """Coerce a legacy naive datetime (some pre-refactor DB rows) to UTC-aware
+    so ordering never mixes naive and aware. New items are already aware."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _build_event(key: str, members: list[CollectedItem]) -> PassthroughEvent:
+    # Stable primary selection (I1): earliest published_at, tiebreak on source name.
+    ordered = sorted(members, key=lambda i: (_aware(i.published_at), i.source))
+    primary = ordered[0]
+
+    domains = _distinct_sorted(i.metadata.get("domain") for i in ordered)
+    regions = _distinct_sorted(i.metadata.get("region") for i in ordered)
+    published = [_aware(i.published_at) for i in ordered]
+
+    return PassthroughEvent(
+        event_id=hashlib.md5(key.encode()).hexdigest(),
+        canonical_url=normalize_url(primary.url) if _has_url(primary) else None,
+        title=primary.title,
+        items=ordered,
+        primary_item=primary,
+        source_count=len({i.source for i in ordered}),
+        source_diversity=len(domains),
+        sources=_distinct_sorted(i.source for i in ordered),
+        domains=domains,
+        regions=regions,
+        first_seen=min(published),
+        last_seen=max(published),
+    )
+
+
+class ExactDupClusterer(ClustererPort):
+    """Merge items with an identical ``canonical_key``; pass the rest through.
+
+    Deterministic and source-agnostic — no ``if source == ...`` branching, no
+    thresholds. Output order is stable regardless of input order: events are
+    sorted by ``(first_seen, event_id)``.
+    """
+
+    def cluster(self, items: list[CollectedItem]) -> list[PassthroughEvent]:
+        groups: dict[str, list[CollectedItem]] = {}
+        for item in items:
+            key = canonical_key(item.url, item.title)
+            groups.setdefault(key, []).append(item)
+
+        events = [_build_event(key, members) for key, members in groups.items()]
+        events.sort(key=lambda e: (e.first_seen, e.event_id))
+        return events
+
+
+# ---------------------------------------------------------------------------
+# ISOLATED — legacy fuzzy 3-gate matching (polishing slot, not wired)
+# ---------------------------------------------------------------------------
 
 _COVERAGE_SOURCES = {"TechCrunch", "MarkTechPost"}
 _HUGGINGFACE_SOURCE = "HuggingFace"
@@ -114,7 +185,7 @@ def _gate3_tiebreak(
     )
 
 
-def cluster(items: list[CollectedItem]) -> list[Event]:
+def _legacy_fuzzy_cluster(items: list[CollectedItem]) -> list[Event]:
     origin_items = [i for i in items if i.source not in _COVERAGE_SOURCES]
     coverage_items = [i for i in items if i.source in _COVERAGE_SOURCES]
 
@@ -157,3 +228,15 @@ def cluster(items: list[CollectedItem]) -> list[Event]:
         event.diversity = len({m.source for m in echoes})
 
     return events
+
+
+class FuzzyClusterer:
+    """Isolated legacy fuzzy 3-gate clusterer (polishing slot, not wired).
+
+    Returns the legacy origin/echo ``Event`` shape — deliberately does not
+    implement ``ClustererPort`` (different return type). Kept only so the
+    threshold-based logic and its tests survive for a future re-measurement.
+    """
+
+    def cluster(self, items: list[CollectedItem]) -> list[Event]:
+        return _legacy_fuzzy_cluster(items)
